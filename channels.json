@@ -1,0 +1,1666 @@
+{
+"channels": [
+{
+"channel_id": "1506830230982103111",
+"channel_name": "消息通知-邮件",
+"category_name": "",
+"channel_type": 0
+},
+{
+"channel_id": "1518289769866465373",
+"channel_name": "🔐",
+"category_name": "╭・═════  ⚙ 后 台══════",
+"channel_type": 2
+},
+{
+"channel_id": "1518290034141433906",
+"channel_name": "🔐",
+"category_name": "╭・═════  🇨🇳 A股  ══════",
+"channel_type": 0
+},
+{
+"channel_id": "1518290201133322250",
+"channel_name": "🔐",
+"category_name": "╭・═════  🇭🇰 港股══════",
+"channel_type": 0
+},
+{
+"channel_id": "1518289956932419754",
+"channel_name": "🔐",
+"category_name": "╭・═════  🪙 加密  ══════",
+"channel_type": 2
+},
+{
+"channel_id": "1518288333871120484",
+"channel_name": "🔐",
+"category_name": "╭・═════ 🇺🇸 美 股 ══════",
+"channel_type": 2
+},
+{
+"channel_id": "1518288915235078245",
+"channel_name": "🔐",
+"category_name": "╭・═════ 🌐 通 用══════",
+"channel_type": 2
+},
+{
+"channel_id": "1517754981736775750",
+"channel_name": "·｜机构研报-p0",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1523862718023602359",
+"channel_name": "·｜前言信息-p0",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1535869229310672957",
+"channel_name": "·｜180k研报-p0",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754987365531858",
+"channel_name": "·｜x-serenity小宁-p0",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755004579217408",
+"channel_name": "·｜x-unusual_whales-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755001718440006",
+"channel_name": "·｜x-walter-bloomberg-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1535267804587229234",
+"channel_name": "·｜x-shanghaojin-p0",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754984542900415",
+"channel_name": "·｜投行黄药师-宏观-p0",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1535914156597973003",
+"channel_name": "·｜x-problemsniper-p0",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754990268121100",
+"channel_name": "·｜x-nico投资有道-p0",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754993535484024",
+"channel_name": "·｜x-唐石峻-p0",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754998052622366",
+"channel_name": "·｜x-舒芬-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755007536074792",
+"channel_name": "·｜鹰哥-宏观-p0",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755021238734890",
+"channel_name": "·｜j先生-技术分析-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755023818489980",
+"channel_name": "·｜fake-技术分析-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755027110887525",
+"channel_name": "·｜长桥-价值哥-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755029832990860",
+"channel_name": "·｜海马哥alpha-a股-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755032341053571",
+"channel_name": "·｜美投君pro-学堂更新-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755035168149535",
+"channel_name": "·｜美投君pro-期权教程-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755038024339456",
+"channel_name": "💠长桥-海豚研究-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755041019203784",
+"channel_name": "💠长桥-周树人的交易员-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755043800158208",
+"channel_name": "💠长桥-angerbird-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755046127861924",
+"channel_name": "💠长桥-大雪雪的交易员-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755049168605213",
+"channel_name": "💠长桥-索螺丝-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755052817645719",
+"channel_name": "💠长桥-菲te北京分特-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755055422312499",
+"channel_name": "💠长桥-奥斯汀成长股实验室-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755058287018086",
+"channel_name": "💠长桥-屹哥小迷弟-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755061265240084",
+"channel_name": "💠长桥-反指股神小顾-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755064020766720",
+"channel_name": "💠长桥-奇迹的交易员cola-p1",
+"category_name": "〖 VIP 〗 ┃💎美股 · 投研 · Research┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754837528477746",
+"channel_name": "·｜jlaw-myt-股票-波段＆长线-p0",
+"category_name": "〖 VIP 〗┃💎美股 · 技术分析博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1539658197076549672",
+"channel_name": "·｜jlaw-myt英文-股票-波段＆长线-p0",
+"category_name": "〖 VIP 〗┃💎美股 · 技术分析博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754840355311808",
+"channel_name": "·｜xtrader猫姐-股票-中线-p0",
+"category_name": "〖 VIP 〗┃💎美股 · 技术分析博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754853101797468",
+"channel_name": "·｜幂笈投资-股票-波段＆中线-p0",
+"category_name": "〖 VIP 〗┃💎美股 · 技术分析博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1560316729186455744",
+"channel_name": "·｜mg姐-股票-波段＆中线-p0",
+"category_name": "〖 VIP 〗┃💎美股 · 技术分析博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754864975876128",
+"channel_name": "·｜mrkc深夜学堂-投研圈-p0",
+"category_name": "〖 VIP 〗┃💎美股 · 技术分析博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754881409159178",
+"channel_name": "·｜seekingalpha-picks-股票中长线-p0",
+"category_name": "〖 VIP 〗┃💎美股 · 技术分析博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754939462385714",
+"channel_name": "·｜chris-sain-股票-长线-p0",
+"category_name": "〖 VIP 〗┃💎美股 · 技术分析博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754969334485053",
+"channel_name": "·｜tuk-盘前分析-短线-p0",
+"category_name": "〖 VIP 〗┃💎美股 · 技术分析博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754936555737239",
+"channel_name": "·｜hengy恒逸-股票-中线-p1",
+"category_name": "〖 VIP 〗┃💎美股 · 技术分析博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754948039999539",
+"channel_name": "·｜curtis-股票-长线-p1",
+"category_name": "〖 VIP 〗┃💎美股 · 技术分析博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754954025013330",
+"channel_name": "·｜诗诗-股票-中线-p1",
+"category_name": "〖 VIP 〗┃💎美股 · 技术分析博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754966624833697",
+"channel_name": "·｜e神-股票-波段-p1",
+"category_name": "〖 VIP 〗┃💎美股 · 技术分析博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754960647950376",
+"channel_name": "·｜alex-股票-波段-p1",
+"category_name": "〖 VIP 〗┃💎美股 · 技术分析博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754875687997522",
+"channel_name": "·｜量投领航-股票-中＆长线-p0",
+"category_name": "〖 VIP 〗┃💎美股 · 技术分析博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1535626771356188783",
+"channel_name": "利润医生-加密-波段-p1",
+"category_name": "〖 VIP 🪙〗加密 · 交易员 · 现货 · Spot",
+"channel_type": 0
+},
+{
+"channel_id": "1538922102940237834",
+"channel_name": "舒琴姐姐-加密-波段-p1",
+"category_name": "〖 VIP 🪙〗加密 · 交易员 · 现货 · Spot",
+"channel_type": 0
+},
+{
+"channel_id": "1520322030472401078",
+"channel_name": "aa姐-加密-波段-p1",
+"category_name": "〖 VIP 🪙〗加密 · 交易员 · 现货 · Spot",
+"channel_type": 0
+},
+{
+"channel_id": "1546325872213106818",
+"channel_name": "懂币猫-加密-短线-p1",
+"category_name": "〖 VIP 🪙〗加密 · 交易员 · 现货 · Spot",
+"channel_type": 0
+},
+{
+"channel_id": "1543499641536913498",
+"channel_name": "提罗初始之塔-加密-短线-p1",
+"category_name": "〖 VIP 🪙〗加密 · 交易员 · 现货 · Spot",
+"channel_type": 0
+},
+{
+"channel_id": "1543500039945584690",
+"channel_name": "提罗进阶之梯-加密-短线-p1",
+"category_name": "〖 VIP 🪙〗加密 · 交易员 · 现货 · Spot",
+"channel_type": 0
+},
+{
+"channel_id": "1517754972068909169",
+"channel_name": "sharpshear-加密-波段-p1",
+"category_name": "〖 VIP 🪙〗加密 · 交易员 · 现货 · Spot",
+"channel_type": 0
+},
+{
+"channel_id": "1518647478537162863",
+"channel_name": "belovy-加密-波段-p1",
+"category_name": "〖 VIP 🪙〗加密 · 交易员 · 现货 · Spot",
+"channel_type": 0
+},
+{
+"channel_id": "1517754956738990124",
+"channel_name": "逸哥-加密货币-短中线-p2",
+"category_name": "〖 VIP 🪙〗加密 · 交易员 · 现货 · Spot",
+"channel_type": 0
+},
+{
+"channel_id": "1517754749250830407",
+"channel_name": "·｜cc姐-期权股票-波段-p0",
+"category_name": "〖 VIP〗 ┃💎美股 · 博主 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754722730377370",
+"channel_name": "·｜clint克林-期权-日内-p0",
+"category_name": "〖 VIP〗 ┃💎美股 · 博主 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1518646852415656108",
+"channel_name": "·｜clint克林-期权-波段-p0",
+"category_name": "〖 VIP〗 ┃💎美股 · 博主 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754778371752036",
+"channel_name": "·｜天哥-期权-中线-p0",
+"category_name": "〖 VIP〗 ┃💎美股 · 博主 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1535591893491257384",
+"channel_name": "·｜索亚财经-期权-波段-p0",
+"category_name": "〖 VIP〗 ┃💎美股 · 博主 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754886748639263",
+"channel_name": "·｜期权异常视频-中线-黄金vip-p0",
+"category_name": "〖 VIP〗 ┃💎美股 · 博主 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754884156428308",
+"channel_name": "·｜期权异常策略-中线-黄金vip-p0",
+"category_name": "〖 VIP〗 ┃💎美股 · 博主 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1526963983716843683",
+"channel_name": "·｜valerie卖方-期权-中线-p1",
+"category_name": "〖 VIP〗 ┃💎美股 · 博主 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1526963424683102308",
+"channel_name": "·｜ak-期权-日内-p1",
+"category_name": "〖 VIP〗 ┃💎美股 · 博主 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754834718035968",
+"channel_name": "·｜华尔街阿宝-期权-短线-p2",
+"category_name": "〖 VIP〗 ┃💎美股 · 博主 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754859150118994",
+"channel_name": "｜·王海滨-大宗商品-中线-p0",
+"category_name": "〖 VIP〗 ┃💎美股 · 宏观财经博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754903131459716",
+"channel_name": "｜·视野环球财经-股票-中长线-p0",
+"category_name": "〖 VIP〗 ┃💎美股 · 宏观财经博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754895615266927",
+"channel_name": "｜·nana说美股-股票-中线＆长线-p0",
+"category_name": "〖 VIP〗 ┃💎美股 · 宏观财经博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754892578721952",
+"channel_name": "｜·牛顿师兄星球-股票-中＆长线-p0",
+"category_name": "〖 VIP〗 ┃💎美股 · 宏观财经博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754923788275732",
+"channel_name": "｜·美股研究社星球-股票-中＆长线-p1",
+"category_name": "〖 VIP〗 ┃💎美股 · 宏观财经博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1543601411923775619",
+"channel_name": "｜·stone记-股票-中＆长线-p1",
+"category_name": "〖 VIP〗 ┃💎美股 · 宏观财经博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754933556809858",
+"channel_name": "｜·一博投资-宏观策略-中＆长线-p0",
+"category_name": "〖 VIP〗 ┃💎美股 · 宏观财经博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754861981012009",
+"channel_name": "｜·洪灝-宏观策略-中＆长线-p0",
+"category_name": "〖 VIP〗 ┃💎美股 · 宏观财经博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754906209943652",
+"channel_name": "｜·阳光财经-股票-中线-p0",
+"category_name": "〖 VIP〗 ┃💎美股 · 宏观财经博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1518792350963597332",
+"channel_name": "｜·nick-美股咖啡館-股票-中长线-p0",
+"category_name": "〖 VIP〗 ┃💎美股 · 宏观财经博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1552708485215555684",
+"channel_name": "｜·flora尚之桃en-期权-短线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1551990149414518824",
+"channel_name": "｜·flora尚之桃-期权-短线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1551990693596102656",
+"channel_name": "｜·flora尚之桃-期权-波段-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754716212170805",
+"channel_name": "｜·ashley艾雪莉-期权-短线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754713414697050",
+"channel_name": "｜·tsth-期权-波段-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754719479533720",
+"channel_name": "｜·angela安琪拉-期权-短线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754725615927316",
+"channel_name": "｜·enrich-期权-波段-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754746427936869",
+"channel_name": "｜·kc-期权-波段-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754710680014911",
+"channel_name": "｜·bear-期权-波段-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754728107212841",
+"channel_name": "｜·josh’s乔希斯-sell-put-call-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754754678390976",
+"channel_name": "｜·风筝哥-期权-短线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1518645363316101262",
+"channel_name": "｜·angela安琪拉-期权-波段-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754828284231784",
+"channel_name": "｜·-j先生-期权-短线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754733782368309",
+"channel_name": "｜·oculus-期权-短线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754743294791741",
+"channel_name": "｜·tuk-期权-短线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754798433239070",
+"channel_name": "｜·nitor奈乔-期权-短线-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1518612176594665483",
+"channel_name": "｜·evapanda-期权-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754831635484745",
+"channel_name": "｜·fake-期权-短线-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1518613232376479834",
+"channel_name": "｜·rocky-期权-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1518654619151237270",
+"channel_name": "｜·zenith-期权-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1518655313287577820",
+"channel_name": "｜·drargon-期权-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1521317124356706385",
+"channel_name": "｜·onepath-期权-短线-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754801155342377",
+"channel_name": "｜·james-期权-短线-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754807002071100",
+"channel_name": "｜·jpm-期权-短线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1546876049013346334",
+"channel_name": "｜·bryce-期权-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754825654403233",
+"channel_name": "｜·bishop-期权-短线-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754803982172221",
+"channel_name": "｜·mark-期权-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1546876674661027971",
+"channel_name": "｜·tophat-期权-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1546876975665119313",
+"channel_name": "｜·zabes-期权-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754975093260359",
+"channel_name": "｜·gladiator-期权-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1536368734216658964",
+"channel_name": "｜·altori-期权-短线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1559223165840789584",
+"channel_name": "｜·浪神-期权-短线-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754731173515304",
+"channel_name": "｜·rowdy-期权-短线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754810089083005",
+"channel_name": "｜·m先生-期权-短线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754772466303070",
+"channel_name": "｜·赵哥-期权-短线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754770004119703",
+"channel_name": "｜·阿达-期权-短线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754963491688651",
+"channel_name": "｜·zeus-期权-短线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754761489809428",
+"channel_name": "｜·qiko-量化期权-短线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754764279025755",
+"channel_name": "｜·qiko-期权-短线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期权 · Options┃",
+"channel_type": 0
+},
+{
+"channel_id": "1530938285143359568",
+"channel_name": "黄金哥-黄金-波段-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期货 · Future┃",
+"channel_type": 0
+},
+{
+"channel_id": "1530923809673183232",
+"channel_name": "斯奈珀-黄金-波段-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期货 · Future┃",
+"channel_type": 0
+},
+{
+"channel_id": "1530916809811820585",
+"channel_name": "曼苏尔-黄金-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期货 · Future┃",
+"channel_type": 0
+},
+{
+"channel_id": "1518643610915180564",
+"channel_name": "expo-期货-波段-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期货 · Future┃",
+"channel_type": 0
+},
+{
+"channel_id": "1546869518415175820",
+"channel_name": "brayden-期货-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期货 · Future┃",
+"channel_type": 0
+},
+{
+"channel_id": "1546869600262692924",
+"channel_name": "shark-期货-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期货 · Future┃",
+"channel_type": 0
+},
+{
+"channel_id": "1546869209584377866",
+"channel_name": "bishop-期货-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 期货 · Future┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754775674949742",
+"channel_name": "·｜赵哥-正股-波段-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1457985760916668466",
+"channel_name": "·｜silas-正股-中长线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1546877968276656230",
+"channel_name": "｜·bear-股票-长线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754752031658105",
+"channel_name": "·｜zeta-正股-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754951143784493",
+"channel_name": "·｜alvaro-正股-中线-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754942507450388",
+"channel_name": "·｜alphatrader-正股-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754945191940136",
+"channel_name": "·｜mario-正股-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1518635925650018675",
+"channel_name": "·｜mr-正股-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754820142829718",
+"channel_name": "·｜luxue-正股-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 交易员 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754699200200865",
+"channel_name": "｜·智润宏观-股票期权-短＆长线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754878624272535",
+"channel_name": "｜·d的财富链-股票中长线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754849729446040",
+"channel_name": "｜·精英财经-股票中长线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754889416081559",
+"channel_name": "｜·牛顿师兄-股票-中＆长线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1540725727203434667",
+"channel_name": "｜·投资talk君-股票中长线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754909057875998",
+"channel_name": "｜·x-invest想法＆长线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1527881981474373672",
+"channel_name": "｜·ethan美股笔记股票中长线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754900719734885",
+"channel_name": "｜·晓世博美股-股票-中＆长线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754918125965342",
+"channel_name": "｜·美投君pro-视频-中＆长线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754920957251724",
+"channel_name": "｜·美投君pro-答疑-中＆长线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754856520028210",
+"channel_name": "｜·老李玩钱-股票-中＆长线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1535693313573658785",
+"channel_name": "｜·老管解牛-股票-中＆长线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1545655224209907753",
+"channel_name": "｜·老雷财经-股票-中＆长线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754915332558889",
+"channel_name": "｜·美投君pro-股票-长线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754813071233066",
+"channel_name": "｜·yao尧-股票中长线-p1",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1558277355796168785",
+"channel_name": "｜·x-价值哥＆长线-p1",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754926976073891",
+"channel_name": "｜·山鸡哥-股票-长线-p1",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754930545561651",
+"channel_name": "｜·信仰守望者-股票-中线-p1",
+"category_name": "〖 VIP〗┃💎美股 · 价值投资博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754693420453938",
+"channel_name": "·｜顺哥-股票-中＆长线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754844272918528",
+"channel_name": "·｜moneylife-股票期权-中线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1526593168131227818",
+"channel_name": "·｜kqj-股票期权-中线-p0",
+"category_name": "〖 VIP〗┃💎美股 · 博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1541805674638483618",
+"channel_name": "·｜rayna-股票期权-中线-p1",
+"category_name": "〖 VIP〗┃💎美股 · 博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1459562960467923126",
+"channel_name": "·｜whale-投资组合-long-term-p1",
+"category_name": "〖 VIP〗┃💎美股 · 博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754783824478280",
+"channel_name": "·｜whale-trading-signals-p1",
+"category_name": "〖 VIP〗┃💎美股 · 博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1465862672862937264",
+"channel_name": "·｜whale-每日图表分析-swing-p1",
+"category_name": "〖 VIP〗┃💎美股 · 博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754785988743190",
+"channel_name": "·｜whale-日内交易思路-short-p1",
+"category_name": "〖 VIP〗┃💎美股 · 博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754789222682664",
+"channel_name": "·｜whale-交易思路-long-term-p1",
+"category_name": "〖 VIP〗┃💎美股 · 博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754791973879858",
+"channel_name": "·｜whale-交易思路-swing-p1",
+"category_name": "〖 VIP〗┃💎美股 · 博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754795400888411",
+"channel_name": "·｜whale-波段信号-p1",
+"category_name": "〖 VIP〗┃💎美股 · 博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754781077340290",
+"channel_name": "·｜whale-百倍挑战-middle-term-p1",
+"category_name": "〖 VIP〗┃💎美股 · 博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754816082739320",
+"channel_name": "·｜daniel-股票-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1559191981761101824",
+"channel_name": "·｜阿林美股笔记-股票-中线-p1",
+"category_name": "〖 VIP〗┃💎美股 · 博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754696113324256",
+"channel_name": "·｜美股投资网-股票-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1531705964305059840",
+"channel_name": "·｜美股投资网备线-股票-波段-p1",
+"category_name": "〖 VIP〗┃💎美股 · 博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754978641645698",
+"channel_name": "·｜美股投资网-视频-p2",
+"category_name": "〖 VIP〗┃💎美股 · 博主 · 正股 · Stock┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754628614393997",
+"channel_name": "｜·nx＋cd趋势策略选股-买入-p0",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754631889879130",
+"channel_name": "｜·cd策略选股-买入-p1",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754667444994362",
+"channel_name": "｜·rs-扫描器day-告警-p1",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1546880110991384628",
+"channel_name": "｜·rs-扫描器波段-告警-p1",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754640710635530",
+"channel_name": "｜·staxai量化-期权透视镜-告警-p0",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754673614950551",
+"channel_name": "｜·量子数据-黄金扫描器-告警-p0",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754676429324399",
+"channel_name": "｜·量子数据-期权异动-告警-p0",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754679201894450",
+"channel_name": "｜·量子数据-暗池-告警-p0",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754681886244924",
+"channel_name": "｜·量子数据-ai算法-告警-p1",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754684847292426",
+"channel_name": "｜·量子数据-新闻扫描器-告警-p2",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754687544365106",
+"channel_name": "｜·量子数据-sec-披露文件-告警-p2",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754643638124555",
+"channel_name": "｜·鲸鱼量化-期权实时订单流-p0",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754655377985577",
+"channel_name": "｜·鲸鱼量化-股票成交量异常-p0",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754652605808780",
+"channel_name": "｜·鲸鱼量化-高成交量期权-p0",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754646716878979",
+"channel_name": "｜·鲸鱼量化-分析师评级-p0",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754649678057552",
+"channel_name": "｜·鲸鱼量化-内部交易-p0",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754658142027867",
+"channel_name": "｜·鲸鱼量化-告警-p0",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754638038859776",
+"channel_name": "｜·猫姐量化机器人-告警-p0",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754635182542999",
+"channel_name": "｜·猫姐ai缠论-告警-p0",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754664148533381",
+"channel_name": "｜·bullflow-期权告警-p1",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754660772122655",
+"channel_name": "｜·gex-量化告警-p0",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754670922207252",
+"channel_name": "｜·金价-告警-p1",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1559224944649441401",
+"channel_name": "｜·十八哥-实盘追踪-p1",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1559225006876008459",
+"channel_name": "｜·猫哥-实盘追踪-p1",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1559225192776081438",
+"channel_name": "｜·指王哥-非实盘追踪-p1",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754690425851995",
+"channel_name": "｜·tradingview-告警",
+"category_name": "〖 VIP〗┃💎美股 · 量化 · Quantify┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754867484196946",
+"channel_name": "六便士-股票中长线-p0",
+"category_name": "〖 ♦️VIP 〗 A股 · 博主 · Stock",
+"channel_type": 0
+},
+{
+"channel_id": "1528313648156639312",
+"channel_name": "波浪理论柳玉东-股票-中线-p0",
+"category_name": "〖 ♦️VIP 〗 A股 · 博主 · Stock",
+"channel_type": 0
+},
+{
+"channel_id": "1542891027969351690",
+"channel_name": "波浪理论柳玉东备线-股票-中线-p0",
+"category_name": "〖 ♦️VIP 〗 A股 · 博主 · Stock",
+"channel_type": 0
+},
+{
+"channel_id": "1547055435910090792",
+"channel_name": "清华大学桐叔-股票中长线-p0",
+"category_name": "〖 ♦️VIP 〗 A股 · 博主 · Stock",
+"channel_type": 0
+},
+{
+"channel_id": "1550140023196614686",
+"channel_name": "小马哥-股票-波段-p1",
+"category_name": "〖 ♦️VIP 〗 A股 · 博主 · Stock",
+"channel_type": 0
+},
+{
+"channel_id": "1517754870470410250",
+"channel_name": "▫️六爷-股票-中线-p0",
+"category_name": "〖 🌟VIP〗港股 · 交易员 · Trader",
+"channel_type": 0
+},
+{
+"channel_id": "1560316199064047676",
+"channel_name": "▫️mg姐-股票-中线-p0",
+"category_name": "〖 🌟VIP〗港股 · 交易员 · Trader",
+"channel_type": 0
+},
+{
+"channel_id": "1453191731196465255",
+"channel_name": "💹tradingview指标",
+"category_name": "〖VIP〗┃🎁资源中心・Resource Hub┃",
+"channel_type": 0
+},
+{
+"channel_id": "1520951209937211392",
+"channel_name": "🔠富途技术指标",
+"category_name": "〖VIP〗┃🎁资源中心・Resource Hub┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754622251368608",
+"channel_name": "🔍nx＋cd扫描器",
+"category_name": "〖VIP〗┃🎁资源中心・Resource Hub┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755018474688694",
+"channel_name": "🗃️优质学习资源",
+"category_name": "〖VIP〗┃🎁资源中心・Resource Hub┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755015815495781",
+"channel_name": "📚优质书籍",
+"category_name": "〖VIP〗┃🎁资源中心・Resource Hub┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755010362904736",
+"channel_name": "📡seekingalpha-account",
+"category_name": "〖VIP〗┃🎁资源中心・Resource Hub┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755013143986246",
+"channel_name": "🌅deepvue-account",
+"category_name": "〖VIP〗┃🎁资源中心・Resource Hub┃",
+"channel_type": 0
+},
+{
+"channel_id": "1516115607391830187",
+"channel_name": "📝消息网关-使用说明-gateway",
+"category_name": "〖VIP〗┃📩 消息网关· Msg Gateway┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754605952565349",
+"channel_name": "📤消息通知-邮件说明email-configuration",
+"category_name": "〖VIP〗┃📩 消息网关· Msg Gateway┃",
+"channel_type": 0
+},
+{
+"channel_id": "1505120509858152579",
+"channel_name": "🔌mcp接入必看-access",
+"category_name": "〖VIP〗┃📩 消息网关· Msg Gateway┃",
+"channel_type": 0
+},
+{
+"channel_id": "1548171299015106700",
+"channel_name": "🔌实时推送接入必看-access",
+"category_name": "〖VIP〗┃📩 消息网关· Msg Gateway┃",
+"channel_type": 0
+},
+{
+"channel_id": "1436729928740634646",
+"channel_name": "🧠大模型维基-llm-wiki",
+"category_name": "〖VIP〗┃📩 消息网关· Msg Gateway┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754594577617088",
+"channel_name": "🤖ai-hermes-free-use",
+"category_name": "〖VIP〗┃🔍 AI  Agent汇总・AI  agent┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754600516485150",
+"channel_name": "🤖ai-小龙虾-claw-free-use",
+"category_name": "〖VIP〗┃🔍 AI  Agent汇总・AI  agent┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754602911436834",
+"channel_name": "🤖ai-实时推荐-real-time-p0",
+"category_name": "〖VIP〗┃🔍 AI  Agent汇总・AI  agent┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755118995640490",
+"channel_name": "🤖ai-llmwiki报告-llm-reports-p0",
+"category_name": "〖VIP〗┃🔍 AI  Agent汇总・AI  agent┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754612462129302",
+"channel_name": "🤖ai-yutube-kol-summarize-p0",
+"category_name": "〖VIP〗┃🔍 AI  Agent汇总・AI  agent┃",
+"channel_type": 0
+},
+{
+"channel_id": "1432005671221592135",
+"channel_name": "🤖ai-日周月-summarize-reports-p0",
+"category_name": "〖VIP〗┃🔍 AI  Agent汇总・AI  agent┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754615175712790",
+"channel_name": "🤖ai-微信公众号-summarize-p1",
+"category_name": "〖VIP〗┃🔍 AI  Agent汇总・AI  agent┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754618774294629",
+"channel_name": "🤖ai-胜率分析",
+"category_name": "〖VIP〗┃🔍 AI  Agent汇总・AI  agent┃",
+"channel_type": 0
+},
+{
+"channel_id": "1503804682995499200",
+"channel_name": "🐳鲸鱼-查询终端-说明书",
+"category_name": "〖⭐VIP+ 〗巨鲸异动流 · Unusual Whales Flow",
+"channel_type": 0
+},
+{
+"channel_id": "1553071188832555148",
+"channel_name": "🐳鲸鱼-mcp查询终端-说明书",
+"category_name": "〖⭐VIP+ 〗巨鲸异动流 · Unusual Whales Flow",
+"channel_type": 0
+},
+{
+"channel_id": "1553079782978359477",
+"channel_name": "🐳gexbot-查询终端-说明书",
+"category_name": "〖⭐VIP+ 〗巨鲸异动流 · Unusual Whales Flow",
+"channel_type": 0
+},
+{
+"channel_id": "1553077553122775091",
+"channel_name": "🐳gexbot-查询终端",
+"category_name": "〖⭐VIP+ 〗巨鲸异动流 · Unusual Whales Flow",
+"channel_type": 0
+},
+{
+"channel_id": "1503799811516928041",
+"channel_name": "🐳鲸鱼-查询终端",
+"category_name": "〖⭐VIP+ 〗巨鲸异动流 · Unusual Whales Flow",
+"channel_type": 0
+},
+{
+"channel_id": "1518219530495721613",
+"channel_name": "🐳live-options-flow",
+"category_name": "〖⭐VIP+ 〗巨鲸异动流 · Unusual Whales Flow",
+"channel_type": 0
+},
+{
+"channel_id": "1518220385177309347",
+"channel_name": "🐳trump-news",
+"category_name": "〖⭐VIP+ 〗巨鲸异动流 · Unusual Whales Flow",
+"channel_type": 0
+},
+{
+"channel_id": "1518220794361020427",
+"channel_name": "🐳analyst-ratings",
+"category_name": "〖⭐VIP+ 〗巨鲸异动流 · Unusual Whales Flow",
+"channel_type": 0
+},
+{
+"channel_id": "1518221208468852887",
+"channel_name": "🐳insider-trades",
+"category_name": "〖⭐VIP+ 〗巨鲸异动流 · Unusual Whales Flow",
+"channel_type": 0
+},
+{
+"channel_id": "1518221919265095741",
+"channel_name": "🐳stock-updates",
+"category_name": "〖⭐VIP+ 〗巨鲸异动流 · Unusual Whales Flow",
+"channel_type": 0
+},
+{
+"channel_id": "1518222079969853451",
+"channel_name": "🐳market-updates",
+"category_name": "〖⭐VIP+ 〗巨鲸异动流 · Unusual Whales Flow",
+"channel_type": 0
+},
+{
+"channel_id": "1518222355758059541",
+"channel_name": "🐳uw-tweets",
+"category_name": "〖⭐VIP+ 〗巨鲸异动流 · Unusual Whales Flow",
+"channel_type": 0
+},
+{
+"channel_id": "1518222600830980106",
+"channel_name": "🐳highest-volume-options",
+"category_name": "〖⭐VIP+ 〗巨鲸异动流 · Unusual Whales Flow",
+"channel_type": 0
+},
+{
+"channel_id": "1518222897242443946",
+"channel_name": "🐳daily-economic-news",
+"category_name": "〖⭐VIP+ 〗巨鲸异动流 · Unusual Whales Flow",
+"channel_type": 0
+},
+{
+"channel_id": "1517754872718426226",
+"channel_name": "▫️我爱广州-股票-中线-p0",
+"category_name": "〖🌟 VIP 〗 港股 · 博主 · Stock",
+"channel_type": 0
+},
+{
+"channel_id": "1467335654672433294",
+"channel_name": "🔔会员到期提醒・expiry-alert",
+"category_name": "💎 ┃会员服务中心 | Premium Hub┃",
+"channel_type": 0
+},
+{
+"channel_id": "1469730474577494090",
+"channel_name": "⏳会员到期查询・expiry",
+"category_name": "💎 ┃会员服务中心 | Premium Hub┃",
+"channel_type": 0
+},
+{
+"channel_id": "1442009248598065284",
+"channel_name": "✅加入会员・join-vip",
+"category_name": "💎 ┃会员服务中心 | Premium Hub┃",
+"channel_type": 0
+},
+{
+"channel_id": "1513134200063135864",
+"channel_name": "💳gpt订阅・gpt-buy",
+"category_name": "💎 ┃会员服务中心 | Premium Hub┃",
+"channel_type": 0
+},
+{
+"channel_id": "1538450519327113296",
+"channel_name": "📩谷歌网盘说明・google-drive",
+"category_name": "💎 ┃会员服务中心 | Premium Hub┃",
+"channel_type": 0
+},
+{
+"channel_id": "1552900565233700874",
+"channel_name": "🤖自动化交易说明・automated",
+"category_name": "💎 ┃会员服务中心 | Premium Hub┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517754592287260743",
+"channel_name": "vip交流-vip-chat",
+"category_name": "💬 ┃交流群 · Discuss┃",
+"channel_type": 0
+},
+{
+"channel_id": "1425290575774482502",
+"channel_name": "交流-free-chat",
+"category_name": "💬 ┃交流群 · Discuss┃",
+"channel_type": 0
+},
+{
+"channel_id": "1513135841785020436",
+"channel_name": "ai-交流-ai-chat",
+"category_name": "💬 ┃交流群 · Discuss┃",
+"channel_type": 0
+},
+{
+"channel_id": "1425331921352654848",
+"channel_name": "a股交流-a-chat",
+"category_name": "💬 ┃交流群 · Discuss┃",
+"channel_type": 0
+},
+{
+"channel_id": "1425290908244639804",
+"channel_name": "tv交流群-tv-chat",
+"category_name": "💬 ┃交流群 · Discuss┃",
+"channel_type": 0
+},
+{
+"channel_id": "1425293428471631992",
+"channel_name": "👋欢迎・welcome",
+"category_name": "📢 ┃公告 · Announcement┃",
+"channel_type": 0
+},
+{
+"channel_id": "1425293756655210506",
+"channel_name": "📏规则・rules",
+"category_name": "📢 ┃公告 · Announcement┃",
+"channel_type": 0
+},
+{
+"channel_id": "1425294058674192395",
+"channel_name": "🆕新朋友・nf-joined",
+"category_name": "📢 ┃公告 · Announcement┃",
+"channel_type": 0
+},
+{
+"channel_id": "1425315403256828006",
+"channel_name": "🙋申诉・report",
+"category_name": "📢 ┃公告 · Announcement┃",
+"channel_type": 0
+},
+{
+"channel_id": "1464506210467446948",
+"channel_name": "💫频道评级・rating",
+"category_name": "📢 ┃公告 · Announcement┃",
+"channel_type": 0
+},
+{
+"channel_id": "1439261212041805824",
+"channel_name": "🔄更新日志・changelog",
+"category_name": "📢 ┃公告 · Announcement┃",
+"channel_type": 0
+},
+{
+"channel_id": "1518189025691697262",
+"channel_name": "🗺️服务器地图·server-map",
+"category_name": "📢 ┃公告 · Announcement┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755066629492898",
+"channel_name": "恐慌贪婪指数-ear-and-greed",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755070203039764",
+"channel_name": "·-川普动态实时-trump-news",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755076972904479",
+"channel_name": "·-马斯克动态-elon-musk-x",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755073810141316",
+"channel_name": "·-川普动态-trump-news",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755094706425877",
+"channel_name": "油管博主监控-yutube",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755091883655308",
+"channel_name": "微信公众号监控",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755112829747382",
+"channel_name": "alex-investment-memorandum",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755082987409449",
+"channel_name": "期权异常监控-unusual-options",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755102926999706",
+"channel_name": "推特舆情监控-x-public-opinion",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755131481952316",
+"channel_name": "美国加拿大-investment-group",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755124720603170",
+"channel_name": "彭博社-股票新闻-bloomberg",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755085763907624",
+"channel_name": "财报大事件-earnings-report",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755116256624702",
+"channel_name": "个股与宏观新闻-summarize",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755121797173379",
+"channel_name": "reddit-wsb-public-opinion",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755100511207434",
+"channel_name": "加密货币情报-crypto",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755088465039372",
+"channel_name": "木头姐基金调仓-arkk",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755128722231449",
+"channel_name": "大v-shufen-chatroom",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755108828643471",
+"channel_name": "加美财经-causmoney",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755080177090670",
+"channel_name": "daily-economic-news",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1517755106140098590",
+"channel_name": "tg舆情监控",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+},
+{
+"channel_id": "1535322046962212864",
+"channel_name": "赵哥vip讨论群-chatroom",
+"category_name": "🛰️ ┃公共情报 · Public Information┃",
+"channel_type": 0
+}
+]
+}

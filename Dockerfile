@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
  && rm -rf /tmp/* && apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 RUN useradd -m app
 WORKDIR /app
-COPY --chown=app:app server.py providers.py mcp_client.py entrypoint.sh lbsafe ./
+COPY --chown=app:app server.py providers.py mcp_client.py entrypoint.sh lbsafe channels.json ./
 COPY --chown=app:app qqq/ qqq/
 COPY --chown=app:app static/index.html static/
 USER app

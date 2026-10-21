@@ -14,10 +14,14 @@ chains, quotes, status = {}, {}, {"mcp": "connecting", "last_update": None, "err
 winrate = {"data": None, "ts": None}
 msgs, seen, subs = [], set(), []
 CH = {}
-try:
-    for c in json.load(open("/workspace/agent-tools/f00c5a0e-557f-4b28-93d8-2371cac9df10.txt"))["channels"]:
-        if "期权" in (c.get("category_name") or "") and c.get("channel_type") == 0: CH[c["channel_id"]] = c["channel_name"].strip("·｜ ")
-except Exception as e: print("channel list error", e)
+def load_channels(chs):
+    out = {c["channel_id"]: c["channel_name"].strip("·｜ ") for c in chs if "期权" in (c.get("category_name") or "") and c.get("channel_type") == 0}
+    if out: CH.clear(); CH.update(out)
+    return len(out)
+try: load_channels(json.load(open(os.path.join(BASE, "channels.json")))["channels"])  # bundled snapshot (non-secret ids/names)
+except Exception as e: print("bundled channel list error", e)
+try: print("channels refreshed via MCP:", load_channels(mcp.call("list_channels", {}).get("channels", [])))
+except Exception as e: print("channel refresh failed, using bundled list:", e)
 OPT = re.compile(r"\$?\b([A-Z]{1,5}(?:/[A-Z])?)\s+\$?(\d+(?:\.\d+)?)\s*(CALLS?|PUTS?|C|P)\b(?:\s+(\d{1,2}/\d{1,2}(?:/\d{2,4})?))?(?:\s*@\s*\$?(\d+(?:\.\d+)?))?", re.I)
 TKR = re.compile(r"\$([A-Z]{1,5})\b")
 def parse(text):
