@@ -16,14 +16,14 @@ small{color:#778}
 .slb{border-bottom:2px solid #26c281}.scb{border-bottom:2px dotted #ffa726}</style></head><body><nav style="position:fixed;bottom:6px;left:8px;z-index:99;font:12px sans-serif;background:#111a;padding:3px 8px;border-radius:6px"><a href="/" style="color:#9cf;margin-right:10px">期权看板</a><a href="/qqq" style="color:#9cf;margin-right:10px">QQQ实时</a><a href="/qqq/chart?s=QQQ" style="color:#9cf;margin-right:10px">关键点位</a><a href="/qqq/radar" style="color:#fbbf24">期权雷达</a></nav>
 <h2>📈 实时期权信号 & 期权链看板 <small>US Stock VIP MCP</small></h2>
 <div class="card" id="statusbar">连接: <b id="conn">…</b> · 最后更新(北京时间) <b id="lu">-</b> · <span id="errs" style="color:#ef9a9a"></span></div>
+<div class="card" style="margin-top:8px"><b style="font-size:17px">🔔 实时期权信号</b> <small>谁 · 买卖什么 · 什么时候 (北京时间)</small>
+ <input id="flt" placeholder="筛选 交易员/代码 如 kc 或 META" size=24 style="background:#1b1f2a;color:#ddd;border:1px solid #333;padding:5px;margin-left:8px">
+ <select id="chf"><option value="">全部频道</option></select> <label><input type="checkbox" id="onlyc">仅含合约</label> <label><input type="checkbox" id="snd" checked>声音</label> <small id="cnt"></small>
+<div id="feed" class="wrap" style="max-height:72vh;margin-top:6px"></div></div>
+<h3 style="margin:18px 0 6px">报价 & 期权链</h3>
 <div class="card" style="margin-top:8px"><b>实时报价</b> <small id="qsrc"></small> <input id="addt" placeholder="添加代码" size=7 style="background:#1b1f2a;color:#ddd;border:1px solid #333"><button onclick="addT()">+</button>
 <div id="quotes" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px"></div></div>
-<div class="grid">
-<div class="card"><b>🔔 期权频道实时信号</b> <select id="chf"><option value="">全部频道</option></select> <label><input type="checkbox" id="snd" checked>声音</label>
-<div id="feed" class="wrap" style="max-height:520px"></div></div>
-<div class="card"><b>🏆 期权频道胜率榜 (30天)</b> <small id="wrts"></small><div id="wrov"></div><div class="wrap" style="max-height:480px"><table><thead><tr><th style="text-align:left">频道</th><th>胜率</th><th>胜/负</th><th>已结算/总</th><th>均收益</th><th>连胜</th><th>评分</th></tr></thead><tbody id="wrtb"></tbody></table></div></div>
-</div>
-<style>.msg{border-bottom:1px solid #242a38;padding:6px 2px;font-size:13px;text-align:left}.msg .h{color:#889;font-size:12px}.tk{background:#ffb74d;color:#000;border-radius:4px;padding:0 5px;font-weight:700;margin-left:4px}
+<style>.msg{border-bottom:1px solid #242a38;padding:6px 2px;font-size:13px;text-align:left}.msg .h{color:#889;font-size:12px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:15px}.tm{font-family:monospace;color:#ddd;min-width:46px}.tr{color:#4fc3f7;font-weight:700;font-size:16px}.tag{font-size:11px;color:#889;border:1px solid #333;border-radius:4px;padding:0 4px}.act{border-radius:4px;padding:1px 7px;font-weight:700;color:#fff}.a买入{background:#1e8e5a}.a卖出{background:#c0392b}.a减仓{background:#d68910}.a止损{background:#7d3c98}.ct{background:#ffb74d;color:#000;border-radius:4px;padding:1px 7px;font-weight:700;font-family:monospace}.tx{white-space:pre-wrap;color:#aab;margin-top:3px;font-size:13px}.tk{background:#ffb74d;color:#000;border-radius:4px;padding:0 5px;font-weight:700;margin-left:4px}
 .flash{animation:fl 2s}@keyframes fl{from{background:#5a4b10}to{background:transparent}}.q{min-width:150px}.q b{font-size:18px}</style>
 <div class="tabs" id="tabs"></div>
 <div class="hdr">
@@ -74,15 +74,19 @@ function draw(id,type,labels,datasets,title){if(charts[id])charts[id].destroy();
  charts[id]=new Chart($(id),{type,data:{labels,datasets},options:{animation:false,plugins:{title:{display:true,text:title,color:'#ccc'},legend:{labels:{color:'#bbb'}}},scales:{x:{ticks:{color:'#889'},grid:{color:'#222'}},y:{ticks:{color:'#889'},grid:{color:'#222'}}}}});}
 
 let chf='';const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-function card(m,isNew){return `<div class="msg ${isNew?'flash':''}" data-ch="${m.channel_id}"><div class="h">${m.time_bj} 北京 · <b style="color:#4fc3f7">${esc(m.channel)}</b> · ${esc(m.author)}${m.option?`<span class="tk">${esc(m.option)}</span>`:m.ticker?`<span class="tk">$${m.ticker}</span>`:''} ${m.url?`<a href="${m.url}" target=_blank style="color:#667">↗</a>`:''}</div><div style="white-space:pre-wrap">${esc(m.text).slice(0,600)}</div></div>`}
-function applyF(){document.querySelectorAll('.msg').forEach(e=>e.style.display=!chf||e.dataset.ch==chf?'':'none')}
+const pad=n=>String(n).padStart(2,'0');
+function tfmt(ts){const d=new Date((ts+8*3600)*1000),n=new Date(Date.now()+8*3600*1000);const hm=pad(d.getUTCHours())+':'+pad(d.getUTCMinutes());
+ return d.toISOString().slice(0,10)==n.toISOString().slice(0,10)?hm:`${d.getUTCMonth()+1}/${d.getUTCDate()} ${hm}`}
+function card(m,isNew){const tr=m.trader||m.channel||'';const key=(tr+' '+(m.ticker||'')+' '+(m.option||'')).toLowerCase();
+ return `<div class="msg ${isNew?'flash':''}" data-ch="${m.channel_id}" data-k="${esc(key)}" data-c="${m.option?1:0}"><div class="row"><span class="tm" title="北京时间">${tfmt(m.ts)}</span><span class="tr">${esc(tr)}</span>${m.tag?`<span class="tag">${esc(m.tag)}</span>`:''}${m.action?`<span class="act a${m.action}">${m.action}</span>`:''}${m.option?`<span class="ct">${esc(m.option)}</span>`:m.ticker?`<span class="tag">$${esc(m.ticker)}</span>`:''}${m.url?`<a href="${m.url}" target=_blank style="color:#667">↗</a>`:''}</div><div class="tx">${esc(m.text).slice(0,600)}</div></div>`}
+function applyF(){const q=($('flt').value||'').trim().toLowerCase(),oc=$('onlyc').checked;let n=0;document.querySelectorAll('.msg').forEach(e=>{const v=(!chf||e.dataset.ch==chf)&&(!q||e.dataset.k.includes(q))&&(!oc||e.dataset.c=='1');e.style.display=v?'':'none';n+=v});$('cnt').textContent=n+' 条'}
 function beep(){if(!$('snd').checked)return;try{const a=new AudioContext(),o=a.createOscillator();o.frequency.value=880;o.connect(a.destination);o.start();o.stop(a.currentTime+.15)}catch(e){}}
 async function boot(){const ch=await (await fetch('/api/channels')).json();$('chf').innerHTML+=Object.entries(ch).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join('');
- $('chf').onchange=e=>{chf=e.target.value;applyF()};
- const ms=await (await fetch('/api/messages')).json();$('feed').innerHTML=ms.map(m=>card(m)).join('');
- const es=new EventSource('/api/stream');es.addEventListener('msg',e=>{const m=JSON.parse(e.data);$('feed').insertAdjacentHTML('afterbegin',card(m,1));applyF();beep();document.title='🔔 '+m.channel});
+ $('chf').onchange=e=>{chf=e.target.value;applyF()};$('flt').oninput=applyF;$('onlyc').onchange=applyF;
+ const ms=await (await fetch('/api/messages')).json();$('feed').innerHTML=ms.map(m=>card(m)).join('');applyF();
+ const es=new EventSource('/api/stream');es.addEventListener('msg',e=>{const m=JSON.parse(e.data);$('feed').insertAdjacentHTML('afterbegin',card(m,1));applyF();beep();document.title='🔔 '+(m.trader||m.channel)});
  es.onerror=()=>$('conn').textContent='SSE 重连中…';
- stat();quotesR();wr();setInterval(stat,5000);setInterval(quotesR,15000);setInterval(wr,120000);}
+ stat();quotesR();setInterval(stat,5000);setInterval(quotesR,15000);}
 async function stat(){const s=await (await fetch('/api/status')).json();$('conn').innerHTML=s.mcp=='connected'?'<span class="up">● 已连接</span>':'<span class="dn">● '+s.mcp+'</span>';
  $('lu').textContent=s.last_update||'-';$('errs').textContent=Object.values(s.errors).join(' | ').slice(0,300)}
 async function quotesR(){const q=await (await fetch('/api/quotes')).json();$('quotes').innerHTML=T.map(t=>{const d=q[t];if(!d)return `<div class="card q">${t} 加载中</div>`;const c=d.change>=0;
@@ -90,8 +94,5 @@ async function quotesR(){const q=await (await fetch('/api/quotes')).json();$('qu
  const any=Object.values(q)[0];$('qsrc').textContent=any?any.source:''}
 async function addT(){const t=$('addt').value.trim().toUpperCase();if(!t)return;T=await (await fetch('/api/add/'+t)).json();$('addt').value='';
  $('tabs').innerHTML=T.map(t=>`<button onclick="sel('${t}')" id="b_${t}">${t}</button>`).join('');sel(cur);quotesR()}
-async function wr(){const w=await (await fetch('/api/winrate')).json();if(!w.data)return;$('wrts').textContent='更新 '+w.ts+' 北京';const o=w.data.overall;
- $('wrov').innerHTML=`<small>整体: ${o.total_signals} 信号, 已结算 ${o.settled_signals}, 胜率 ${f(o.win_rate*100,1)}%, 均收益 ${f(o.average_return*100,1)}%</small>`;
- $('wrtb').innerHTML=w.data.rows.sort((a,b)=>(b.win_rate||0)-(a.win_rate||0)||b.settled_signals-a.settled_signals).map(r=>`<tr><td style="text-align:left">${esc(r.channel_name)}</td><td class="${r.win_rate>=.5?'up':'dn'}">${f(r.win_rate*100,0)}%</td><td>${r.win_count}/${r.loss_count}</td><td>${r.settled_signals}/${r.total_signals}</td><td>${f(r.average_return*100,1)}%</td><td>${r.current_streak||0}${r.current_streak_outcome=='win'?'胜':r.current_streak_outcome=='loss'?'负':''}</td><td>${f(r.value_score,0)}</td></tr>`).join('')}
 $('exp').onchange=render;$('n').onchange=render;init();
 </script></body></html>

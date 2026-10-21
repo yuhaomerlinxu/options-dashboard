@@ -11,7 +11,6 @@ CHAIN_TTL, QUOTE_TTL, FEED_POLL, WR_TTL = 60, 30, 5, 600
 mcp = MCP(); prov = LongbridgeProvider() if os.environ.get("CHAIN_PROVIDER", "longbridge") == "longbridge" else McpProvider(mcp)
 lock = threading.Lock()
 chains, quotes, status = {}, {}, {"mcp": "connecting", "last_update": None, "errors": {}, "backoff": 0}
-winrate = {"data": None, "ts": None}
 msgs, seen, subs = [], set(), []
 CH = {}
 def load_channels(chs):
@@ -22,14 +21,47 @@ try: load_channels(json.load(open(os.path.join(BASE, "channels.json")))["channel
 except Exception as e: print("bundled channel list error", e)
 try: print("channels refreshed via MCP:", load_channels(mcp.call("list_channels", {}).get("channels", [])))
 except Exception as e: print("channel refresh failed, using bundled list:", e)
-OPT = re.compile(r"\$?\b([A-Z]{1,5}(?:/[A-Z])?)\s+\$?(\d+(?:\.\d+)?)\s*(CALLS?|PUTS?|C|P)\b(?:\s+(\d{1,2}/\d{1,2}(?:/\d{2,4})?))?(?:\s*@\s*\$?(\d+(?:\.\d+)?))?", re.I)
+OPT = re.compile(r"\$?\b([A-Z]{1,5}(?:/[A-Z])?)\s+\$?(\d+(?:\.\d+)?)\s*(CALLS?|PUTS?|C|P)\b(?:\s+(?:exp\.?\s*)?(\d{1,2}/\d{1,2}(?:/\d{2,4})?))?(?:[^@\n]{0,40}?@\s*\$?(\d*\.?\d+))?", re.I)
+OPT2 = re.compile(r"\$?\b([A-Z]{1,5})\s+(\d{1,2}/\d{1,2}(?:/\d{2,4})?)\s+\$?(\d+(?:\.\d+)?)\s*(CALLS?|PUTS?|C|P)\b(?:[^@\n]{0,40}?(?:@|\bat\b)\s*\$?(\d*\.?\d+))?", re.I)
 TKR = re.compile(r"\$([A-Z]{1,5})\b")
+STOP_TK = {"INTO", "PUT", "CALL", "SET", "BTO", "STC", "DTE", "ITM", "OTM", "ATM", "PT", "AT", "THE", "SL", "TP", "I", "A", "MNQ", "ES", "NQ", "IN", "ON", "TO", "OF", "UP"}
+ACTS = [("止损", re.compile(r"\bSTC\b.*\b(?:stop|SL)\b|stop(?:ped)?\s*out|hit (?:my )?stop|\bSL hit|止损", re.I)),
+        ("减仓", re.compile(r"✂️|\btrim(?:med|ming)?\b|tak(?:e|ing|en) (?:some |more )?(?:profit|off|\d{1,3}\s*%)|sold (?:half|some|\d)|减仓|部分止盈", re.I)),
+        ("卖出", re.compile(r"\bSTC\b|\ball out\b|\bclos(?:e|ed|ing)\b|\bsold\b|\bsell(?:ing)?\b|\bexit(?:ed|ing)?\b|\bout of\b|清仓|卖出|平仓", re.I)),
+        ("买入", re.compile(r"\bBTO\b|\bbought\b|I'm Entering|\bLOTTO\b|\bbuy(?:ing)?\b|\bentry\b|\bentered\b|\bopen(?:ed|ing)?\b|\bswing\b|\blotto\b|\bstarter\b|\badd(?:ed|ing)?\b|买入|开仓|进场|加仓", re.I))]
 def parse(text):
-    m = OPT.search(text or "")
-    if m and m.group(1).upper() not in ("PT", "AT", "THE", "SL", "TP"):
-        return {"ticker": m.group(1).upper(), "option": " ".join(x for x in [m.group(1).upper(), m.group(2), m.group(3).upper(), m.group(4) or "", ("@" + m.group(5)) if m.group(5) else ""] if x)}
-    t = TKR.search(text or "")
-    return {"ticker": t.group(1), "option": None} if t else {"ticker": None, "option": None}
+    t = text or ""
+    out = {"ticker": None, "option": None, "contract": None, "action": None}
+    m = OPT.search(t); c = None
+    if m and m.group(1).upper() not in STOP_TK:
+        c = dict(ticker=m.group(1).upper(), strike=m.group(2), cp=m.group(3)[0].upper(), exp=m.group(4), price=m.group(5))
+    else:
+        m = OPT2.search(t)
+        if m and m.group(1).upper() not in STOP_TK:
+            c = dict(ticker=m.group(1).upper(), strike=m.group(3), cp=m.group(4)[0].upper(), exp=m.group(2), price=m.group(5))
+    if c and not c["price"]:
+        pm = re.search(r"(?:Entry|Price|Fill(?:ed)?|Exit)\**:?\**\s*\$?(\d*\.?\d+)", t, re.I)
+        if pm: c["price"] = pm.group(1)
+    if c:
+        out.update(ticker=c["ticker"], contract=c, option=f'{c["ticker"]} {c["strike"]}{c["cp"]}' + (f' {c["exp"]}' if c["exp"] else "") + (f' @ {c["price"]}' if c["price"] else ""))
+    else:
+        tk = TKR.search(t)
+        if tk: out["ticker"] = tk.group(1)
+    for name, rx in ACTS:
+        if rx.search(t):
+            if name == "买入" and not c: continue
+            out["action"] = name; break
+    return out
+def trader_of(ch):
+    ch = (ch or "").strip("-·｜ ")
+    i = ch.find("-期权")
+    if i < 0: return ch, ""
+    return ch[:i].strip("- "), re.sub(r"-p\d$", "", ch[i + 1:])
+def cjk_ratio(s):
+    s = re.sub(r"\s", "", s or "");
+    return sum(1 for ch in s if "\u4e00" <= ch <= "\u9fff") / max(1, len(s))
+def numsig(s):
+    return tuple(sorted(re.findall(r"\d+(?:\.\d+)?", re.sub(r"\d+\s*%", "", s or ""))))
 def ok(key):
     status["errors"].pop(key, None); status["mcp"] = "connected"; status["last_update"] = now_bj(); status["backoff"] = 0
 def err(key, e):
@@ -44,8 +76,17 @@ def push(m, live=False):
     item = dict(id=m["message_id"], channel_id=m["channel_id"], channel=CH.get(m["channel_id"], m.get("channel_name")),
                 author=m.get("author_name"), ts=ts, time_bj=datetime.datetime.fromtimestamp(ts, BJ).strftime("%m-%d %H:%M:%S"),
                 text=text[:2000], url=m.get("jump_url"), **parse(text))
+    item["trader"], item["tag"] = trader_of(item["channel"])
+    cr = cjk_ratio(text); zh = cr > 0.15; sig = numsig(text)
     with lock:
         if item["id"] in seen: return False
+        pair = [x for x in msgs if x["channel_id"] == item["channel_id"] and abs(x["ts"] - ts) <= 300 and x.get("_zh") != zh and (x.get("_sig") == sig or
+                (abs(x["ts"] - ts) <= 60 and min(x.get("_cr", 0), cr) < 0.05 and 0.25 < len(x["text"]) / max(1, len(text)) < 4))]
+        if pair:
+            seen.add(item["id"])
+            if zh: return False  # Chinese translation of an English original already shown
+            for x in pair: msgs.remove(x)  # English original arrived after its translation: replace
+        item["_zh"], item["_sig"], item["_cr"] = zh, sig, cr
         seen.add(item["id"]); msgs.append(item); msgs.sort(key=lambda x: x["ts"], reverse=True); del msgs[300:]
         if live and ts > START - 300:
             for q in list(subs): q.put(item)
@@ -83,19 +124,6 @@ def market_loop():
                     with lock: chains[t] = d
                 except Exception as e: err("chain:" + t, e)
         time.sleep(QUOTE_TTL + status["backoff"])
-def wr_loop():
-    while True:
-        try:
-            r = mcp.call("win_rate_get_summary", {"asset_type": "option", "range": "30d"}, timeout=90)
-            s = r.get("summary", {}); rows = []
-            for b in s.get("blogger_rankings", []):
-                if b.get("channel_id") in CH or "期权" in (b.get("channel_name") or ""):
-                    rows.append({k: b.get(k) for k in ("channel_id", "channel_name", "total_signals", "settled_signals", "win_count", "loss_count",
-                        "open_count", "win_rate", "average_return", "profit_factor", "current_streak", "current_streak_outcome", "value_score", "rating_tags")})
-            winrate.update(data={"overall": {k: s.get(k) for k in ("total_signals", "settled_signals", "win_count", "loss_count", "win_rate", "average_return")}, "rows": rows}, ts=now_bj())
-            ok("winrate")
-        except Exception as e: err("winrate", e)
-        time.sleep(WR_TTL)
 import secrets, base64, hmac
 from urllib.parse import urlsplit, parse_qs, urlencode
 TOKEN = os.environ.get("DASH_TOKEN", "").strip()
@@ -151,7 +179,6 @@ class H(qqqapp.Mixin, SimpleHTTPRequestHandler):
         if p == "/api/messages":
             with lock: return s.j(msgs[:200])
         if p == "/api/channels": return s.j(CH)
-        if p == "/api/winrate": return s.j(winrate)
         if p == "/api/status": return s.j({**status, "now_bj": now_bj(), "session": bool(mcp.sid), "options_channels": len(CH), "messages_cached": len(msgs), "chain_entitlement": prov.last_error})
         if p == "/api/stream":
             s.send_response(200); s.send_header("Content-Type", "text/event-stream"); s.send_header("Cache-Control", "no-cache, no-transform"); s.send_header("X-Accel-Buffering", "no"); s.end_headers(); s.wfile.write(b": open\n\n"); s.wfile.flush()
@@ -167,6 +194,6 @@ class H(qqqapp.Mixin, SimpleHTTPRequestHandler):
         return super().do_GET()
     def log_message(s, *a): pass
 if __name__ == "__main__":
-    for f in (feed_loop, market_loop, wr_loop): threading.Thread(target=f, daemon=True).start()
+    for f in (feed_loop, market_loop): threading.Thread(target=f, daemon=True).start()
     qqqapp.start()
     ThreadingHTTPServer(("0.0.0.0", int(os.environ.get("PORT", "8080"))), H).serve_forever()
