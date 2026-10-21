@@ -1,0 +1,77 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QQQ 实时</title>
+<style>html,body{overflow-x:hidden;max-width:100vw}*{box-sizing:border-box}.card{overflow:hidden}pre{word-break:break-all}body{background:#0e1117;color:#e6e6e6;font-family:-apple-system,"PingFang SC",sans-serif;margin:0;padding:12px}
+.card{background:#1a1f2b;border-radius:10px;padding:12px;margin-bottom:12px}.big{font-size:36px;font-weight:bold}
+.up{color:#26c281}.down{color:#ff4d4f}.row{display:flex;justify-content:space-between;padding:3px 0;font-size:14px}.muted{color:#888;font-size:12px}
+button{background:#2d6cdf;color:#fff;border:0;border-radius:8px;padding:10px;width:100%;font-size:16px;margin-bottom:12px}
+.sig{border-left:4px solid;padding:8px;margin:8px 0;background:#141821;border-radius:6px;font-size:13px}.bull{border-color:#26c281}.bear{border-color:#ff4d4f}
+@keyframes fl{0%,100%{background:#0e1117}50%{background:#7a5c00}}.flash{animation:fl .5s 8}pre{white-space:pre-wrap;margin:4px 0;font-size:12px;color:#bbb}</style></head>
+<body><nav style="position:fixed;bottom:6px;left:8px;z-index:99;font:12px sans-serif;background:#111a;padding:3px 8px;border-radius:6px"><a href="/" style="color:#9cf;margin-right:10px">期权看板</a><a href="/qqq" style="color:#9cf;margin-right:10px">QQQ实时</a><a href="/qqq/chart?s=QQQ" style="color:#9cf;margin-right:10px">关键点位</a><a href="/qqq/radar" style="color:#fbbf24">期权雷达</a></nav><a href="/qqq/chart?s=QQQ" style="position:fixed;top:6px;right:8px;z-index:9;color:#5b9cff;font-size:13px">多股K线·关键位 →</a><a href="/qqq/radar" style="position:fixed;top:26px;right:8px;z-index:9;color:#fbbf24;font-size:13px">📡 期权雷达 →</a><button id="snd">🔔 点击开启声音</button>
+<div class="card"><div class="muted" id="slab">QQQ</div><div id="last" class="big">--</div><div id="chg"></div>
+<div class="row"><span>今日最高</span><span id="hi">--</span></div><div class="row"><span>今日最低</span><span id="lo">--</span></div>
+<div class="row"><span>昨收</span><span id="pc">--</span></div></div>
+<div class="card" style="padding:6px"><div class="muted" id="kinfo">1分钟K线 · EMA<span style="color:#f5c542">10</span>/<span style="color:#4fc3f7">20</span>/<span style="color:#ff8a65">60</span>/<span style="color:#e0e0e0">120</span> · <span style="color:#b388ff">VWAP</span></div><div id="chart" style="height:50vh;position:relative"></div>
+<div class="muted" id="rsil" style="margin-top:2px">RSI(14) <span style="color:#f5c542">--</span></div><div id="rsic" style="height:12vh"></div>
+<div class="muted" id="stl">StochRSI(14,14,3,3) <span style="color:#4fc3f7">K --</span> <span style="color:#ff8a65">D --</span></div><div id="stc" style="height:12vh"></div><div class="muted" id="et"></div></div>
+<div class="card" id="ext"></div><div class="card" id="opt" style="display:none"></div>
+<div class="card"><b>1/2/3 分钟共振信号</b><div id="sigs" class="muted">暂无信号</div></div>
+<div class="muted" id="ts"></div>
+<script src="/qqq/static/lwc.js"></script>
+<script>
+let ctx=null,lastKey=null;const $=i=>document.getElementById(i);
+$('snd').onclick=()=>{ctx=new (window.AudioContext||window.webkitAudioContext)();ctx.resume();beep();$('snd').textContent='🔊 声音已开启'};
+function beep(){if(!ctx)return;for(let i=0;i<3;i++){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=880;o.connect(g);g.connect(ctx.destination);g.gain.value=.3;o.start(ctx.currentTime+i*.3);o.stop(ctx.currentTime+i*.3+.2)}}
+const f=v=>v==null?'--':v,cls=v=>parseFloat(v)>=0?'up':'down';
+function pct(l,p){if(!l||!p)return'';const c=(l-p)/p*100;return `<span class="${cls(c)}">${c>=0?'+':''}${c.toFixed(2)}%</span>`}
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+function tf(t){if(t==null)return'';if(typeof t!=='object')return esc(t);if(Array.isArray(t))return t.map(x=>typeof x==='object'?esc(JSON.stringify(x)):esc(x)).join('<br>');return Object.entries(t).map(([k,v])=>`<b>${esc(k)}</b>: ${esc(typeof v==='object'?JSON.stringify(v):v)}`).join('<br>')}
+function opt(o){if(!o||typeof o!=='object')return'';return Object.entries(o).map(([k,v])=>`<div class="row"><span>${esc(k)}</span><span>${esc(typeof v==='object'?JSON.stringify(v):v)}</span></div>`).join('')}
+async function poll(){try{const r=await fetch(location.pathname.replace(/\/$/,'')+'/api',{cache:'no-store',headers:{'ngrok-skip-browser-warning':'1'}});const d=await r.json();const q=d.quote;
+if(q){$('slab').textContent='QQQ '+(q.session_label||'');$('last').textContent=q.last;$('last').className='big '+cls(q.change_value);$('chg').innerHTML=`<span class="${cls(q.change_value)}">${q.change_value} (${q.change_percentage}%)</span>`;$('hi').textContent=q.high;$('lo').textContent=q.low;$('pc').textContent=q.prev_close;
+let h='<b>延长时段</b>';[['pre_market','盘前'],['post_market','盘后'],['overnight','夜盘']].forEach(([k,n])=>{const x=q[k];if(x)h+=`<div class="row"><span>${n}</span><span>${x.last} ${pct(+x.last,+x.prev_close)}</span></div><div class="muted" style="text-align:right">高 ${x.high} / 低 ${x.low} · ${x.time_bj||''}</div>`});$('ext').innerHTML=h}
+$('ts').textContent='数据时间（北京时间）：'+d.server_time_bj+(d.quote_error?' · 行情错误: '+d.quote_error:'');
+const a=d.alerts||[];curAlerts=a;if(cs){setMarkers();liveBar(q)}{const ml=mergeList(a);if(ml.length)$('sigs').innerHTML=ml.map(s=>{const b=String(s.direction).toLowerCase().startsWith('bull');return `<div class="sig ${b?'bull':'bear'}"><b class="${b?'up':'down'}">${b?'▲ BUY 看涨':'▼ SELL 看跌'}</b>${s.replay?' <span class=muted>[回放]</span>':''} · ${esc(s.price)}<br>触发：${esc(s.trigger_time_bj)}（北京）<br>日高/日低：${esc(f(s.day_high))} / ${esc(f(s.day_low))}<pre>${tf(s.timeframes)}</pre></div>`}).join('');}if(a.length){const o=a[0].options_0dte;if(o){$('opt').style.display='';$('opt').innerHTML='<b>期权信息（0DTE，最新信号）</b>'+opt(o)}
+
+const k=a[0].trigger_time_bj+a[0].direction;if(lastKey!==null&&k!==lastKey){document.body.classList.remove('flash');void document.body.offsetWidth;document.body.classList.add('flash');beep();if(navigator.vibrate)navigator.vibrate([300,100,300])}lastKey=k}else if(lastKey===null)lastKey='';
+}catch(e){$('ts').textContent='连接失败，重试中… '+e}}
+
+const BASE=location.pathname.replace(/\/$/,''),OFF=8*3600,DEMO=new URLSearchParams(location.search).has('demo');
+let ch,cs,vs,em={},vw,hiL,loL,curAlerts=[],kd=null;
+function initChart(){const el=$('chart');ch=LightweightCharts.createChart(el,{autoSize:true,layout:{background:{color:'#1a1f2b'},textColor:'#bbb'},grid:{vertLines:{color:'#262c3a'},horzLines:{color:'#262c3a'}},timeScale:{timeVisible:true,secondsVisible:false,rightOffset:3},rightPriceScale:{scaleMargins:{top:.05,bottom:.25}},crosshair:{mode:0}});
+cs=ch.addCandlestickSeries({upColor:'#26c281',downColor:'#ff4d4f',borderVisible:false,wickUpColor:'#26c281',wickDownColor:'#ff4d4f'});
+vs=ch.addHistogramSeries({priceFormat:{type:'volume'},priceScaleId:'vol',lastValueVisible:false,priceLineVisible:false});ch.priceScale('vol').applyOptions({scaleMargins:{top:.8,bottom:0}});
+[[10,'#f5c542'],[20,'#4fc3f7'],[60,'#ff8a65'],[120,'#e0e0e0']].forEach(([n,c])=>em[n]=ch.addLineSeries({color:c,lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false}));
+vw=ch.addLineSeries({color:'#b388ff',lineWidth:2,priceLineVisible:false,lastValueVisible:false});
+ch.subscribeCrosshairMove(p=>{if(!p.time)return;const t=new Date((p.time-OFF)*1000);$('et').textContent='美东 '+t.toLocaleTimeString('en-US',{timeZone:'America/New_York',hour12:false})+' ET · 北京 '+t.toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false})})}
+let rc,rs,sc,sk,sd;
+function sub(id){const c=LightweightCharts.createChart($(id),{autoSize:true,layout:{background:{color:'#1a1f2b'},textColor:'#bbb'},grid:{vertLines:{color:'#262c3a'},horzLines:{color:'#262c3a'}},timeScale:{visible:false,rightOffset:3},rightPriceScale:{minimumWidth:60},crosshair:{mode:0},handleScroll:false,handleScale:false});return c}
+function hl(s,v,o){s.createPriceLine({price:v,color:o?'rgba(200,200,200,.6)':'rgba(200,200,200,.25)',lineStyle:2,lineWidth:1,axisLabelVisible:false})}
+function initSub(){ch.applyOptions({rightPriceScale:{minimumWidth:60}});rc=sub('rsic');rs=rc.addLineSeries({color:'#f5c542',lineWidth:1,priceLineVisible:false,autoscaleInfoProvider:()=>({priceRange:{minValue:0,maxValue:100}})});hl(rs,70,1);hl(rs,30,1);hl(rs,50,0);
+sc=sub('stc');const ap=()=>({priceRange:{minValue:0,maxValue:100}});sk=sc.addLineSeries({color:'#4fc3f7',lineWidth:1,priceLineVisible:false,autoscaleInfoProvider:ap});sd=sc.addLineSeries({color:'#ff8a65',lineWidth:1,priceLineVisible:false,autoscaleInfoProvider:ap});hl(sk,80,1);hl(sk,20,1);
+ch.timeScale().subscribeVisibleLogicalRangeChange(r=>{if(r){rc.timeScale().setVisibleLogicalRange(r);sc.timeScale().setVisibleLogicalRange(r)}})}
+function rsiCalc(c,n){const o=Array(c.length).fill(null);if(c.length<=n)return o;let g=0,l=0;for(let i=1;i<=n;i++){const d=c[i]-c[i-1];d>0?g+=d:l-=d}g/=n;l/=n;o[n]=l?100-100/(1+g/l):100;
+for(let i=n+1;i<c.length;i++){const d=c[i]-c[i-1];g=(g*(n-1)+Math.max(d,0))/n;l=(l*(n-1)+Math.max(-d,0))/n;o[i]=l?100-100/(1+g/l):100}return o}
+function sma(a,n){return a.map((v,i)=>{if(v==null||i<n-1)return null;let s=0;for(let j=i-n+1;j<=i;j++){if(a[j]==null)return null;s+=a[j]}return s/n})}
+function stoch(r,n){return r.map((v,i)=>{if(v==null||i<n-1)return null;const w=r.slice(i-n+1,i+1);if(w.includes(null))return null;const lo=Math.min(...w),hi=Math.max(...w);return hi>lo?(v-lo)/(hi-lo)*100:50})}
+function updSub(d){const T=d.bars.map(b=>b.t+OFF),r=rsiCalc(d.bars.map(b=>b.c),14),k=sma(stoch(r,14),3),dd=sma(k,3);
+const ser=a=>T.map((t,i)=>a[i]==null?{time:t}:{time:t,value:a[i]});rs.setData(ser(r));sk.setData(ser(k));sd.setData(ser(dd));
+const L=a=>{const v=a[a.length-1];return v==null?'--':v.toFixed(1)};$('rsil').innerHTML='RSI(14) <span style="color:#f5c542">'+L(r)+'</span> · 70/30';$('stl').innerHTML='StochRSI(14,14,3,3) <span style="color:#4fc3f7">K '+L(k)+'</span> <span style="color:#ff8a65">D '+L(dd)+'</span> · 80/20';
+const lr=ch.timeScale().getVisibleLogicalRange();if(lr){rc.timeScale().setVisibleLogicalRange(lr);sc.timeScale().setVisibleLogicalRange(lr)}}
+function mergeList(a){const km=s=>String(s.trigger_time_bj).slice(0,16)+String(s.direction).slice(0,4),ks=new Set(a.map(km));return a.concat(((kd&&kd.replay_signals)||[]).filter(x=>x.direction&&!ks.has(km(x))).reverse()).sort((x,y)=>String(y.trigger_time_bj).localeCompare(String(x.trigger_time_bj)))}
+function bjToTs(s){const m=String(s).match(/(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d)/);if(!m)return null;return Date.UTC(+m[1],m[2]-1,+m[3],+m[4],+m[5])/1000}
+function setMarkers(){if(cs)cs.setMarkers([]);return;if(!kd||!kd.bars.length)return;let a=curAlerts.slice(),rs0=(kd.replay_signals||[]).filter(x=>x.direction);const km=s=>String(s.trigger_time_bj).slice(0,16)+String(s.direction).slice(0,4);const ks=new Set(a.map(km));rs0.forEach(x=>{if(!ks.has(km(x)))a.push(x)});
+if(DEMO){const b=kd.bars,p=i=>{const x=b[Math.floor(b.length*i)],d=new Date((x.t+OFF)*1000).toISOString();return d.slice(0,10)+' '+d.slice(11,19)};a=a.concat([{direction:'bullish',trigger_time_bj:p(.3),price:b[Math.floor(b.length*.3)].c},{direction:'bearish',trigger_time_bj:p(.7),price:b[Math.floor(b.length*.7)].c}])}
+const t0=kd.bars[0].t+OFF,t1=kd.bars[kd.bars.length-1].t+OFF;
+const ms=a.map(s=>{const t=bjToTs(s.trigger_time_bj);if(t==null||t<t0||t>t1+60)return null;const b=String(s.direction).toLowerCase().startsWith('bull');const hm=(String(s.trigger_time_bj).match(/\d\d:\d\d:\d\d/)||[''])[0];
+return{time:Math.min(t,t1),position:b?'belowBar':'aboveBar',color:s.replay?(b?'#1fa86d':'#d94345'):(b?'#26c281':'#ff4d4f'),shape:b?'arrowUp':'arrowDown',size:2,text:(b?'BUY ':'SELL ')+hm+' '+s.price+(s.replay?' 回放':'')}}).filter(Boolean).sort((x,y)=>x.time-y.time);cs.setMarkers(ms)}
+async function loadK(){try{const d=await (await fetch(BASE+'/kline',{cache:'no-store',headers:{'ngrok-skip-browser-warning':'1'}})).json();if(!d.bars||!d.bars.length){$('kinfo').textContent='K线错误: '+d.error;return}kd=d;
+const T=b=>b.t+OFF;cs.setData(d.bars.map(b=>({time:T(b),open:b.o,high:b.h,low:b.l,close:b.c})));
+vs.setData(d.bars.map(b=>({time:T(b),value:b.v,color:b.c>=b.o?'rgba(38,194,129,.5)':'rgba(255,77,79,.5)'})));
+[10,20,60,120].forEach(n=>em[n].setData(d.bars.map((b,i)=>({time:T(b),value:d['ema'+n][i]}))));vw.setData(d.bars.map((b,i)=>({time:T(b),value:d.vwap[i]})));
+if(hiL)cs.removePriceLine(hiL);if(loL)cs.removePriceLine(loL);
+hiL=cs.createPriceLine({price:d.day_high,color:'#26c281',lineStyle:2,lineWidth:1,axisLabelVisible:true,title:'日高'});loL=cs.createPriceLine({price:d.day_low,color:'#ff4d4f',lineStyle:2,lineWidth:1,axisLabelVisible:true,title:'日低'});
+updSub(d);setMarkers();if(!window._fit){window._fit=1;ch.timeScale().applyOptions({minBarSpacing:0.3});const n=d.bars.length;const fit=()=>{const w=$("chart").clientWidth-65;ch.timeScale().applyOptions({barSpacing:Math.max(0.3,w/(n+4))});ch.timeScale().scrollToRealTime()};fit();setTimeout(fit,500)}if(!$("et").textContent)$('et').textContent='交易日(美东) '+d.session_date_et+' · 时间轴为北京时间'+(DEMO?' · DEMO 演示信号':'')}catch(e){$('kinfo').textContent='K线加载失败 '+e}}
+function liveBar(q){if(!kd||!kd.bars.length||!q||!q.last)return;const b=kd.bars[kd.bars.length-1],p=+q.last;if(q.trade_status&&!/Normal/i.test(q.trade_status))return;const now=Math.floor(Date.now()/60000)*60;if(now-b.t>60)return;
+cs.update({time:b.t+OFF,open:b.o,high:Math.max(b.h,p),low:Math.min(b.l,p),close:p})}
+if(window.LightweightCharts){initChart();initSub();loadK();setInterval(()=>{if(!window._kb){window._kb=1;Promise.resolve(loadK()).finally(()=>window._kb=0)}},1000)}else $('chart').textContent='图表库加载失败';
+poll();setInterval(poll,1000);
+</script></body></html>

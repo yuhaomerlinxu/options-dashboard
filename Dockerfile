@@ -10,9 +10,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
  && rm -rf /tmp/* && apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 RUN useradd -m app
 WORKDIR /app
-COPY --chown=app:app server.py providers.py mcp_client.py entrypoint.sh ./
+COPY --chown=app:app server.py providers.py mcp_client.py entrypoint.sh lbsafe ./
+COPY --chown=app:app qqq/ qqq/
 COPY --chown=app:app static/index.html static/
 USER app
-ENV PORT=8080 PYTHONUNBUFFERED=1 LONGBRIDGE_NO_ANALYTICS=1
+ENV LBSAFE=/app/lbsafe PORT=8080 PYTHONUNBUFFERED=1 LONGBRIDGE_NO_ANALYTICS=1
 EXPOSE 8080
 CMD ["./entrypoint.sh"]

@@ -18,3 +18,9 @@ services:
         sync: false
       - key: LONGBRIDGE_DEVICE_ID
         sync: false
+      - key: NTFY_TOPIC
+        sync: false
+      - key: QQQ_WEBHOOK_URL
+        sync: false
+      - key: QQQ_WEBHOOK_KEY
+        sync: false

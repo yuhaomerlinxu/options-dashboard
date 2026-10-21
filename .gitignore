@@ -5,3 +5,6 @@
 *.bak*
 __pycache__/
 .longbridge/
+qqq/alerts.jsonl
+qqq/radar_data/
+qqq/data/

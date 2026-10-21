@@ -1,0 +1,67 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><title>期权雷达 · Options Radar</title>
+<style>
+body{margin:0;background:#0b0f17;color:#d8dee9;font:14px/1.5 -apple-system,"PingFang SC",sans-serif}
+header{position:sticky;top:0;background:#111827;padding:10px 12px;border-bottom:1px solid #1f2937;z-index:2}
+h1{font-size:17px;margin:0}a{color:#60a5fa}.mut{color:#8b95a7;font-size:12px}
+.wrap{padding:10px;max-width:900px;margin:auto}.card{background:#121a27;border:1px solid #1f2a3a;border-radius:12px;padding:12px;margin:10px 0}
+.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;margin-right:4px}
+.CallDiagonal{background:#064e3b;color:#6ee7b7}.PutDiagonal{background:#7f1d1d;color:#fca5a5}.CallCalendar{background:#1e3a8a;color:#93c5fd}.PutCalendar{background:#581c87;color:#d8b4fe}
+table{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0}td,th{padding:3px 4px;border-bottom:1px solid #1f2a3a;text-align:right}td:first-child,th:first-child{text-align:left}
+.buy{color:#34d399}.sell{color:#f87171}.sc{font-size:20px;font-weight:700;color:#fbbf24;float:right}
+select,button{background:#1f2937;color:#d8dee9;border:1px solid #374151;border-radius:6px;padding:4px 8px}
+details{margin-top:6px}.warn{color:#fbbf24}
+.card{background:#111a2e;border-color:#1e2b45}.rk{color:#22d3ee;font-weight:600}.hd{display:flex;justify-content:space-between;align-items:center;margin:4px 0}
+.sn{font-size:22px;font-weight:700}.sb{display:flex;align-items:center;gap:6px}.bar{width:70px;height:6px;background:#1f2937;border-radius:3px;overflow:hidden}.bar i{display:block;height:100%;background:#22c55e}
+hr{border:0;border-top:1px solid #1e2b45}.leg{display:grid;grid-template-columns:48px 1fr 1fr 70px;padding:4px 0;font-size:15px}.leg span:last-child{text-align:right}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}.m{background:#0d1526;border-radius:8px;padding:6px}.m div:last-child{font-weight:700;font-size:15px}
+</style></head><body><nav style="position:fixed;bottom:6px;left:8px;z-index:99;font:12px sans-serif;background:#111a;padding:3px 8px;border-radius:6px"><a href="/" style="color:#9cf;margin-right:10px">期权看板</a><a href="/qqq" style="color:#9cf;margin-right:10px">QQQ实时</a><a href="/qqq/chart?s=QQQ" style="color:#9cf;margin-right:10px">关键点位</a><a href="/qqq/radar" style="color:#fbbf24">期权雷达</a></nav>
+<header><h1>📡 期权雷达 <span class="mut">日历/对角价差 每日Top5</span></h1>
+<div class="mut"><a href="/qqq">← QQQ</a> · <a href="/qqq/chart">图表</a> · 日期 <select id="d"></select> <button id="rf">刷新</button> <span id="st"></span></div></header>
+<div class="wrap"><div id="meta" class="mut"></div><div id="list">加载中…</div><div id="oth"></div>
+<div class="card"><b>方法说明</b><div class="mut" style="font-size:13px">
+<p><b>到期组合</b>:后腿(买)≈31天(24–42 DTE内最接近31天的周期权),前腿(卖)= 后腿到期日前7天。四种策略统一使用此组合,期限结构也只比较这两个到期日的ATM IV(最接近现价的两档行权价 call/put IV 平均)。</p>
+<p><b>期限结构</b>:前月IV ≥ 后月IV(倒挂/平坦)有利;后月IV高出15%以上直接跳过。</p>
+<p><b>方向</b>:日线 EMA20/EMA50、RSI14、60分钟 EMA20、近7小时 VWAP 合成趋势分(−5…+5)。≥3 多头 → <b>Call Diagonal</b>(买后腿≈0.65Δ call,卖前腿≈0.30Δ call);≤−3 空头 → <b>Put Diagonal</b>(对称);其余为震荡 → 偏多用 <b>Call Calendar</b>(行权价=现价上方3%内的Call墙,否则第一档≥现价),偏空用 <b>Put Calendar</b>(Put墙或第一档≤现价)。</p>
+<p><b>关键位</b>:前腿到期日 ATM ±8档行权价的未平仓量(OI):Call墙/Put墙/最大痛点(窗口内近似)。未计算 gamma flip(无全链 greeks)。</p>
+<p><b>财报</b>:来自 Longbridge 财报日历;前腿跨财报大幅扣分(属刻意卖 IV crush),在两腿之间小幅扣分,未知则标注。</p>
+<p><b>评分</b>(满分100)= 期限结构(≤40) + 趋势强度/清晰度(≤25) + 流动性(两腿最小OI/成交量,≤20) + 财报距离(≤15)。每日取Top5,每个标的最多1个。</p>
+<p><b>盈亏估计</b>:Black-Scholes,假设前腿到期时后腿IV不变、r=4%,得出盈利区间与最大盈利估计;最大亏损=净借记。</p>
+<p><b>时间</b>:美股常规时段开盘后(美东09:35)生成,之后每30分钟刷新(北京时间夏令时21:30–04:00/冬令时22:30–05:00);盘外显示最近一次结果(北京时间)。每日存档可选日期查看。</p>
+<p class="warn"><b>局限</b>:Longbridge 行情无买卖盘(bid/ask),价格为最新成交价 last,可能陈旧、两腿不同步,净借记仅供参考;delta 由IV自行用BS计算;无历史期权IV,<b>未做回测</b>;不构成投资建议。本页只读取行情,绝不下单。</p>
+</div></div></div>
+<script>
+const B='/qqq/radar/api';let sel='';
+async function get(u){const r=await fetch(u+(u.includes('?')?'&':'?')+'_='+Date.now(),{headers:{'ngrok-skip-browser-warning':'1'},cache:'no-store'});const t=await r.text();return JSON.parse(t)}
+const f=(x,n=2)=>x==null?'-':(+x).toFixed(n),pc=x=>x==null?'-':(x*100).toFixed(1)+'%';
+const SN={'Call Diagonal':'看涨对角','Put Diagonal':'看跌对角','Call Calendar':'看涨日历','Put Calendar':'看跌日历'};
+function svg(x){const c=x.curve,W=320,H=130,P=22;const xs=c.map(p=>p[0]),ys=c.map(p=>p[1]);const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys,0),y1=Math.max(...ys,0);
+const X=v=>P+(v-x0)/(x1-x0)*(W-2*P),Y=v=>H-P-(v-y0)/(y1-y0||1)*(H-2*P);const d=c.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+','+Y(p[1]).toFixed(1)).join('');
+const pos=c.map(p=>X(p[0]).toFixed(1)+','+Y(Math.max(p[1],0)).toFixed(1)).join(' ');
+return `<svg viewBox="0 0 ${W} ${H}" width="100%"><line x1="${P}" x2="${W-P}" y1="${Y(0)}" y2="${Y(0)}" stroke="#475569" stroke-dasharray="3"/>
+<polygon points="${X(x0)},${Y(0)} ${pos} ${X(x1)},${Y(0)}" fill="#10b98133"/><path d="${d}" fill="none" stroke="#22d3ee" stroke-width="2"/>
+<line x1="${X(x.spot)}" x2="${X(x.spot)}" y1="${P/2}" y2="${H-P}" stroke="#fbbf24" stroke-dasharray="2"/><text x="${X(x.spot)+3}" y="${P}" fill="#fbbf24" font-size="10">现价 ${f(x.spot)}</text>
+<text x="${P}" y="${H-6}" fill="#8b95a7" font-size="10">${f(x0,0)}</text><text x="${W-P}" y="${H-6}" fill="#8b95a7" font-size="10" text-anchor="end">${f(x1,0)}</text>
+<text x="2" y="${Y(y1)+4}" fill="#34d399" font-size="10">+$${f(y1,0)}</text><text x="2" y="${Y(y0)}" fill="#f87171" font-size="10">-$${f(-y0,0)}</text></svg>`}
+function card(x,i){const sc=x.score10??(x.score/10),leg=l=>`<div class="leg"><b class="${l.side=='BUY'?'buy':'sell'}">${l.side}</b><span>${l.expiry}</span><b>${l.strike}${l.type[0]}×1</b><span>$${f(l.last)}</span></div>`;
+const m=(k,v,c='')=>`<div class="m"><div class="mut">${k}</div><div class="${c}">${v}</div></div>`;
+return `<div class="card"><div class="rk">推荐 ${String(i+1).padStart(2,'0')} · ${x.symbol} <span class="mut">现价 $${f(x.spot)}</span></div>
+<div class="hd"><div class="sn">${x.strategy}<div class="mut" style="font-size:12px;font-weight:400">${SN[x.strategy]}</div></div><div class="sb"><div class="bar"><i style="width:${Math.min(100,sc*10)}%"></i></div><b>${f(sc,1)}/10</b></div></div><hr>
+${x.legs.map(leg).join('')}
+<div class="grid">${m('净成本','$'+f(x.debit*100,0))}${m('最大收益','$'+f(x.max_profit_est,0),'buy')}${m('盈亏比',f(x.rr??x.max_profit_est/x.max_loss))}
+${m('盈亏平衡点',(x.breakevens||[]).map(v=>'$'+f(v,0)).join(' / ')||'-')}${m('当前价格距离',(x.short_dist>0?'+':'')+pc(x.short_dist),'buy')}${m('距离到期日',x.front.dte+' ~ '+x.back.dte+' 天')}</div>
+<div class="mut" style="margin-top:8px">到期盈亏图 <span style="font-size:11px">(前腿到期 ${x.front.expiry},BS估算)</span></div>${x.curve?svg(x):''}
+<div class="mut">IV 前 ${pc(x.front.atm_iv)} / 后 ${pc(x.back.atm_iv)} · Δ ${x.legs.map(l=>f(l.delta,2)).join(' / ')} · OI ${x.legs.map(l=>l.oi??'-').join(' / ')} · Call墙 ${x.levels.call_wall??'-'} Put墙 ${x.levels.put_wall??'-'} 痛点 ${x.levels.max_pain??'-'} · 财报 ${x.earnings?x.earnings.date:(x.earn_flag=='na'?'ETF':'未知')}</div>
+<div style="margin-top:6px">📝 ${x.reason}</div><div class="mut">💡 ${x.limit_note}</div><div class="mut">🚪 ${x.exit}</div></div>`}
+async function load(run){try{const j=await get(B+(sel?'?d='+sel:'?x=1')+(run?'&run=1':''));
+const d=document.getElementById('d');d.innerHTML=j.dates.slice().reverse().map(x=>`<option ${x==(j.data&&j.data.us_date.replace(/-/g,''))?'selected':''}>${x}</option>`).join('');
+document.getElementById('st').textContent=j.status=='pending'?'⏳计算中 '+j.progress:(j.in_session?'🟢盘中':'⚪盘外');
+const D=j.data;if(!D){document.getElementById('list').textContent='暂无数据,计算中…';if(j.status=='pending')setTimeout(load,8000);return}
+document.getElementById('meta').innerHTML=`美股日 ${D.us_date} · 生成于 ${D.generated_bj} 北京时间 · ${D.session} · ${D.tag} · 服务器 ${j.server_time_bj}`;
+document.getElementById('list').innerHTML=D.top.map(card).join('')||'今日无合格信号';
+document.getElementById('oth').innerHTML=`<details class="card"><summary>其余标的 (${D.others.length}) / 跳过 (${D.skipped.length})</summary><table>${D.others.map(x=>`<tr><td>${x.symbol}</td><td>${x.strategy}</td><td>${x.score}</td><td>${pc(x.term_edge)}</td></tr>`).join('')}${D.skipped.map(x=>`<tr><td>${x.symbol}</td><td colspan=3 class="mut">${x.skip}</td></tr>`).join('')}</table>
+<div class="mut">今日刷新记录: ${(D.runs||[]).map(r=>r.generated_bj.slice(11,16)+' '+r.top.map(t=>t[0]).join('/')).join(' | ')}</div></details>`;
+if(j.status=='pending')setTimeout(load,10000)}catch(e){document.getElementById('st').textContent='错误 '+e}}
+document.getElementById('d').onchange=e=>{sel=e.target.value;load()};document.getElementById('rf').onclick=()=>load(true);
+load();setInterval(load,120000);
+</script></body></html>

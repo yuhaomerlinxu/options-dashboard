@@ -2,6 +2,7 @@ import json, threading, time, datetime, os, re, queue
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from mcp_client import MCP
 from providers import McpProvider, LongbridgeProvider
+import sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "qqq")); import qqqapp
 BASE = os.path.dirname(os.path.abspath(__file__))
 BJ = datetime.timezone(datetime.timedelta(hours=8))
 now_bj = lambda: datetime.datetime.now(BJ).strftime("%Y-%m-%d %H:%M:%S")
@@ -95,7 +96,7 @@ import secrets, base64, hmac
 from urllib.parse import urlsplit, parse_qs, urlencode
 TOKEN = os.environ.get("DASH_TOKEN", "").strip()
 assert TOKEN and len(TOKEN) >= 16
-class H(SimpleHTTPRequestHandler):
+class H(qqqapp.Mixin, SimpleHTTPRequestHandler):
     def auth(s):
         u = urlsplit(s.path); qs = parse_qs(u.query)
         k = (qs.get("key") or [""])[0]
@@ -125,6 +126,9 @@ class H(SimpleHTTPRequestHandler):
             b = b"ok"; s.send_response(200); s.send_header("Content-Length", len(b)); s.end_headers(); s.wfile.write(b); return
         if not s.auth(): return
         p = s.path.split("?")[0]
+        if p in ("/levels", "/radar"):
+            s.send_response(302); s.send_header("Location", "/qqq/chart?s=QQQ" if p == "/levels" else "/qqq/radar"); s.end_headers(); return
+        if p == "/qqq" or p.startswith("/qqq/"): return s.qqq_get()
         if p == "/api/tickers": return s.j(TICKERS)
         if p.startswith("/api/add/"):
             t = re.sub(r"[^A-Z.]", "", p.rsplit("/", 1)[1].upper())[:6]
@@ -160,4 +164,5 @@ class H(SimpleHTTPRequestHandler):
     def log_message(s, *a): pass
 if __name__ == "__main__":
     for f in (feed_loop, market_loop, wr_loop): threading.Thread(target=f, daemon=True).start()
+    qqqapp.start()
     ThreadingHTTPServer(("0.0.0.0", int(os.environ.get("PORT", "8080"))), H).serve_forever()

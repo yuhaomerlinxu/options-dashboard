@@ -1,0 +1,20 @@
+{
+  "symbol": "QQQ.US",
+  "longbridge_bin": "/usr/local/bin/longbridge",
+  "quote_interval_sec": 12,
+  "kline_interval_sec": 60,
+  "kline_count": 200,
+  "option_cache_sec": 300,
+  "option_strike_range": 30,
+  "timeframes": [1, 2, 3],
+  "ema_fast": 5,
+  "ema_slow": 9,
+  "vol_lookback": 10,
+  "vol_mult": 0.8,
+  "trend_lookback": 10,
+  "trend_min_move_pct": 0.25,
+  "confirm_window_min": 4,
+  "cooldown_min": 10,
+  "key_header": "Authorization",
+  "key_prefix": "Bearer "
+}
