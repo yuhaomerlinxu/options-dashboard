@@ -1,0 +1,9 @@
+.env
+.env.*
+.git
+*.log
+*.out
+*.bak*
+__pycache__
+README-DEPLOY.md
+render.yaml

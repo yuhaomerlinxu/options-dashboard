@@ -1,0 +1,7 @@
+.env
+.env.*
+*.log
+*.out
+*.bak*
+__pycache__/
+.longbridge/

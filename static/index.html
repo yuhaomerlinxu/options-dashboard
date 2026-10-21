@@ -1,0 +1,97 @@
+<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><title>财报期权链看板</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+body{background:#0f1117;color:#d6d9e0;font-family:system-ui,"PingFang SC","Noto Sans CJK SC",sans-serif;margin:0;padding:16px}
+.tabs button{background:#1b1f2a;color:#aab;border:1px solid #2a3040;padding:8px 18px;margin-right:6px;border-radius:6px;cursor:pointer;font-size:15px}
+.tabs button.on{background:#2d6cdf;color:#fff}
+.hdr{display:flex;gap:24px;align-items:center;margin:14px 0;flex-wrap:wrap}.big{font-size:28px;font-weight:700}
+.up{color:#26c281}.dn{color:#ef5350}.card{background:#161a24;border:1px solid #242a38;border-radius:8px;padding:10px 14px}
+select{background:#1b1f2a;color:#ddd;border:1px solid #333;padding:5px}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{padding:4px 6px;text-align:right;border-bottom:1px solid #1f2430}th{color:#889;position:sticky;top:0;background:#161a24}
+td.k{text-align:center;font-weight:700;background:#1d2230;color:#fff}tr.atm td{background:#2a2a12}
+.itm{background:#141c2a}.hv{color:#ffb74d;font-weight:700}.hoi{color:#4fc3f7;font-weight:700}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.wrap{max-height:560px;overflow:auto}
+small{color:#778}
+.slb{border-bottom:2px solid #26c281}.scb{border-bottom:2px dotted #ffa726}</style></head><body>
+<h2>📈 实时期权信号 & 期权链看板 <small>US Stock VIP MCP</small></h2>
+<div class="card" id="statusbar">连接: <b id="conn">…</b> · 最后更新(北京时间) <b id="lu">-</b> · <span id="errs" style="color:#ef9a9a"></span></div>
+<div class="card" style="margin-top:8px"><b>实时报价</b> <small id="qsrc"></small> <input id="addt" placeholder="添加代码" size=7 style="background:#1b1f2a;color:#ddd;border:1px solid #333"><button onclick="addT()">+</button>
+<div id="quotes" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px"></div></div>
+<div class="grid">
+<div class="card"><b>🔔 期权频道实时信号</b> <select id="chf"><option value="">全部频道</option></select> <label><input type="checkbox" id="snd" checked>声音</label>
+<div id="feed" class="wrap" style="max-height:520px"></div></div>
+<div class="card"><b>🏆 期权频道胜率榜 (30天)</b> <small id="wrts"></small><div id="wrov"></div><div class="wrap" style="max-height:480px"><table><thead><tr><th style="text-align:left">频道</th><th>胜率</th><th>胜/负</th><th>已结算/总</th><th>均收益</th><th>连胜</th><th>评分</th></tr></thead><tbody id="wrtb"></tbody></table></div></div>
+</div>
+<style>.msg{border-bottom:1px solid #242a38;padding:6px 2px;font-size:13px;text-align:left}.msg .h{color:#889;font-size:12px}.tk{background:#ffb74d;color:#000;border-radius:4px;padding:0 5px;font-weight:700;margin-left:4px}
+.flash{animation:fl 2s}@keyframes fl{from{background:#5a4b10}to{background:transparent}}.q{min-width:150px}.q b{font-size:18px}</style>
+<div class="tabs" id="tabs"></div>
+<div class="hdr">
+ <div><div id="sym" class="big"></div><span id="px" class="big"></span> <span id="chg"></span></div>
+ <div class="card">到期日 <select id="exp"></select> 显示行权价数 <select id="n"><option>10</option><option selected>15</option><option>25</option><option>50</option></select></div>
+ <div class="card">ATM 跨式价格 <b id="strad"></b><br>隐含波动幅度 <b id="move"></b></div>
+ <div class="card"><small>最后更新(北京时间) <b id="upd"></b><br>数据源 <span id="src"></span><br>源时间戳 <span id="sts"></span></small></div>
+</div>
+<div class="card wrap"><table><thead><tr>
+<th>看涨 Delta</th><th>IV</th><th>未平仓</th><th>成交量</th><th>买价</th><th>卖价</th><th>最新</th>
+<th style="text-align:center">行权价</th>
+<th>最新</th><th>买价</th><th>卖价</th><th>成交量</th><th>未平仓</th><th>IV</th><th>看跌 Delta</th></tr></thead><tbody id="tb"></tbody></table></div>
+<div class="grid"><div class="card"><canvas id="c1"></canvas></div><div class="card"><canvas id="c2"></canvas></div>
+<div class="card" style="grid-column:span 2"><canvas id="c3" height="80"></canvas></div></div>
+<script>
+let T=[],cur=null,data=null,charts={};const $=id=>document.getElementById(id);
+const f=(v,d=2)=>v==null?'-':(+v).toFixed(d),fi=v=>v==null?'-':Math.round(v).toLocaleString();
+async function init(){T=await (await fetch('/api/tickers')).json();boot();
+ $('tabs').innerHTML=T.map(t=>`<button onclick="sel('${t}')" id="b_${t}">${t}</button>`).join('');sel(T[0]);setInterval(load,60000);}
+function sel(t){cur=t;T.forEach(x=>$('b_'+x).className=x==t?'on':'');$('exp').innerHTML='';load();}
+async function load(){const r=await fetch('/api/chain/'+cur);data=await r.json();if(data.error&&!data.options){$('sym').textContent=cur+' 加载失败: '+data.error;return;}
+ const ex=[...new Set(data.options.map(o=>o.expiry))].sort(),prev=$('exp').value;
+ $('exp').innerHTML=ex.map(e=>`<option>${e}</option>`).join('');
+ $('exp').value=ex.includes(prev)?prev:(ex.includes('2026-10-23')?'2026-10-23':ex.find(e=>e>=new Date().toISOString().slice(0,10))||ex[0]);render();}
+function render(){const d=data,e=$('exp').value,N=+$('n').value,p=d.price;
+ $('sym').textContent=d.symbol;$('px').textContent=f(p);const c=d.change>=0;
+ $('chg').innerHTML=`<span class="${c?'up':'dn'}">${c?'+':''}${f(d.change)} (${c?'+':''}${f(d.change_pct)}%)</span>`;
+ $('upd').textContent=d.fetched_bj;$('src').innerHTML=d.source+(d.fallback?'<br><span style="color:#ef9a9a">MCP: '+esc(d.fallback).slice(0,140)+'</span>':'');$('sts').innerHTML=(d.source_ts||'-')+(d.cboe_ts?'<br>Cboe: '+d.cboe_ts:'')+'<br><span class="slb">绿=Longbridge</span> <span class="scb">橙=Cboe</span>';
+ const m={};d.options.filter(o=>o.expiry==e).forEach(o=>{(m[o.strike]=m[o.strike]||{})[o.type]=o});
+ const ks=Object.keys(m).map(Number).sort((a,b)=>a-b);let ai=0;ks.forEach((k,i)=>{if(Math.abs(k-p)<Math.abs(ks[ai]-p))ai=i});
+ const vis=ks.slice(Math.max(0,ai-N),ai+N+1),atm=ks[ai];
+ const all=vis.flatMap(k=>['C','P'].map(t=>m[k][t]).filter(Boolean)),q=(a,key)=>{const s=a.map(o=>o[key]||0).sort((x,y)=>y-x);return s[Math.min(4,s.length-1)]||Infinity};
+ const vT=Math.max(1,q(all,'volume')),oT=Math.max(1,q(all,'oi'));
+ const S=(o,k,t)=>{const s=o.fs&&o.fs[k];return s?`<span class="${s=='Longbridge'?'slb':'scb'}" title="${k}: ${s}">${t}</span>`:t};
+ const mid=o=>o?(o.bid&&o.ask?(o.bid+o.ask)/2:o.last):null;
+ const cell=(o,side)=>{if(!o)return'<td>-</td>'.repeat(7);const v=`<td class="${o.volume>=vT?'hv':''}">${S(o,'volume',fi(o.volume))}</td>`,oi=`<td class="${o.oi>=oT?'hoi':''}">${S(o,'oi',fi(o.oi))}</td>`,
+  iv=`<td>${S(o,'iv',o.iv!=null?f(o.iv*100,1)+'%':'-')}</td>`,dl=`<td>${S(o,'delta',f(o.delta,3))}</td>`,B=`<td>${S(o,'bid',f(o.bid))}</td>`,A=`<td>${S(o,'ask',f(o.ask))}</td>`,La=`<td>${S(o,'last',f(o.last))}</td>`;
+  return side=='C'?dl+iv+oi+v+B+A+La:La+B+A+v+oi+iv+dl};
+ $('tb').innerHTML=vis.map(k=>`<tr class="${k==atm?'atm':''}"><td colspan=0 style="display:none"></td>${cell(m[k].C,'C').replace(/<td/g,k<p?'<td class="itm"':'<td').replace(/class="itm" class="/g,'class="itm ')}<td class="k">${k}</td>${cell(m[k].P,'P').replace(/<td/g,k>p?'<td class="itm"':'<td').replace(/class="itm" class="/g,'class="itm ')}</tr>`).join('');
+ const SD=d.straddle&&d.straddle[e];if(SD){$('strad').innerHTML='$'+f(SD.straddle)+` (K=${SD.strike})<br><small>C ${f(SD.call)} [${SD.call_src}] + P ${f(SD.put)} [${SD.put_src}]</small>`;$('move').textContent='±'+f(SD.implied_move_pct)+'%';}
+ else{const s=(mid(m[atm].C)||0)+(mid(m[atm].P)||0);$('strad').textContent='$'+f(s)+` (K=${atm})`;$('move').textContent='±'+f(s/p*100)+'%';}
+ const L=vis.map(String),g=(t,k)=>vis.map(x=>m[x][t]?m[x][t][k]:null);
+ draw('c1','bar',L,[{label:'看涨 未平仓',data:g('C','oi'),backgroundColor:'#26c281'},{label:'看跌 未平仓',data:g('P','oi'),backgroundColor:'#ef5350'}],'未平仓量 按行权价');
+ draw('c2','bar',L,[{label:'看涨 成交量',data:g('C','volume'),backgroundColor:'#66bb6a'},{label:'看跌 成交量',data:g('P','volume'),backgroundColor:'#ff7043'}],'成交量 按行权价');
+ const ivs=t=>vis.map(x=>m[x][t]&&m[x][t].iv>0?m[x][t].iv*100:null);
+ draw('c3','line',L,[{label:'看涨 IV%',data:ivs('C'),borderColor:'#26c281',spanGaps:true},{label:'看跌 IV%',data:ivs('P'),borderColor:'#ef5350',spanGaps:true}],'隐含波动率微笑 (IV Smile)');}
+function draw(id,type,labels,datasets,title){if(charts[id])charts[id].destroy();
+ charts[id]=new Chart($(id),{type,data:{labels,datasets},options:{animation:false,plugins:{title:{display:true,text:title,color:'#ccc'},legend:{labels:{color:'#bbb'}}},scales:{x:{ticks:{color:'#889'},grid:{color:'#222'}},y:{ticks:{color:'#889'},grid:{color:'#222'}}}}});}
+
+let chf='';const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function card(m,isNew){return `<div class="msg ${isNew?'flash':''}" data-ch="${m.channel_id}"><div class="h">${m.time_bj} 北京 · <b style="color:#4fc3f7">${esc(m.channel)}</b> · ${esc(m.author)}${m.option?`<span class="tk">${esc(m.option)}</span>`:m.ticker?`<span class="tk">$${m.ticker}</span>`:''} ${m.url?`<a href="${m.url}" target=_blank style="color:#667">↗</a>`:''}</div><div style="white-space:pre-wrap">${esc(m.text).slice(0,600)}</div></div>`}
+function applyF(){document.querySelectorAll('.msg').forEach(e=>e.style.display=!chf||e.dataset.ch==chf?'':'none')}
+function beep(){if(!$('snd').checked)return;try{const a=new AudioContext(),o=a.createOscillator();o.frequency.value=880;o.connect(a.destination);o.start();o.stop(a.currentTime+.15)}catch(e){}}
+async function boot(){const ch=await (await fetch('/api/channels')).json();$('chf').innerHTML+=Object.entries(ch).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join('');
+ $('chf').onchange=e=>{chf=e.target.value;applyF()};
+ const ms=await (await fetch('/api/messages')).json();$('feed').innerHTML=ms.map(m=>card(m)).join('');
+ const es=new EventSource('/api/stream');es.addEventListener('msg',e=>{const m=JSON.parse(e.data);$('feed').insertAdjacentHTML('afterbegin',card(m,1));applyF();beep();document.title='🔔 '+m.channel});
+ es.onerror=()=>$('conn').textContent='SSE 重连中…';
+ stat();quotesR();wr();setInterval(stat,5000);setInterval(quotesR,15000);setInterval(wr,120000);}
+async function stat(){const s=await (await fetch('/api/status')).json();$('conn').innerHTML=s.mcp=='connected'?'<span class="up">● 已连接</span>':'<span class="dn">● '+s.mcp+'</span>';
+ $('lu').textContent=s.last_update||'-';$('errs').textContent=Object.values(s.errors).join(' | ').slice(0,300)}
+async function quotesR(){const q=await (await fetch('/api/quotes')).json();$('quotes').innerHTML=T.map(t=>{const d=q[t];if(!d)return `<div class="card q">${t} 加载中</div>`;const c=d.change>=0;
+ return `<div class="card q" onclick="sel('${t}')" style="cursor:pointer">${t} <b>${f(d.price)}</b> <span class="${c?'up':'dn'}">${c?'+':''}${f(d.change_pct)}%</span>${d.ext_session?` <small>${d.ext_session.replace('_market','')} ${f(d.ext_price)}</small>`:''}<br><small>交易日 ${d.latest_day} · 取于 ${d.fetched_bj.slice(11)} 北京</small></div>`}).join('');
+ const any=Object.values(q)[0];$('qsrc').textContent=any?any.source:''}
+async function addT(){const t=$('addt').value.trim().toUpperCase();if(!t)return;T=await (await fetch('/api/add/'+t)).json();$('addt').value='';
+ $('tabs').innerHTML=T.map(t=>`<button onclick="sel('${t}')" id="b_${t}">${t}</button>`).join('');sel(cur);quotesR()}
+async function wr(){const w=await (await fetch('/api/winrate')).json();if(!w.data)return;$('wrts').textContent='更新 '+w.ts+' 北京';const o=w.data.overall;
+ $('wrov').innerHTML=`<small>整体: ${o.total_signals} 信号, 已结算 ${o.settled_signals}, 胜率 ${f(o.win_rate*100,1)}%, 均收益 ${f(o.average_return*100,1)}%</small>`;
+ $('wrtb').innerHTML=w.data.rows.sort((a,b)=>(b.win_rate||0)-(a.win_rate||0)||b.settled_signals-a.settled_signals).map(r=>`<tr><td style="text-align:left">${esc(r.channel_name)}</td><td class="${r.win_rate>=.5?'up':'dn'}">${f(r.win_rate*100,0)}%</td><td>${r.win_count}/${r.loss_count}</td><td>${r.settled_signals}/${r.total_signals}</td><td>${f(r.average_return*100,1)}%</td><td>${r.current_streak||0}${r.current_streak_outcome=='win'?'胜':r.current_streak_outcome=='loss'?'负':''}</td><td>${f(r.value_score,0)}</td></tr>`).join('')}
+$('exp').onchange=render;$('n').onchange=render;init();
+</script></body></html>
