@@ -71,17 +71,20 @@ def ema(v,n):
 OLD={'t':0,'b':[]}
 def kline():
     with lock:
-        if time.time()-kc['t']<1 and kc['d']:return kc['d']
+        if time.time()-kc['t']<3 and kc['d']:return kc['d']
     try:
-        r=subprocess.run([os.environ['LBSAFE'],'kline','QQQ.US','--period','1m','--count','1000','--session','intraday','--format','json'],capture_output=True,text=True,timeout=20)
-        raw=json.loads(r.stdout)
         from zoneinfo import ZoneInfo;ET=ZoneInfo('America/New_York')
+        def _lb(sess):
+            try:
+                r=subprocess.run([os.environ['LBSAFE'],'kline','QQQ.US','--period','1m','--count','1000','--session',sess,'--format','json'],capture_output=True,text=True,timeout=25)
+                v=json.loads(r.stdout);return v if isinstance(v,list) else []
+            except Exception as e:print('kline',sess,'failed:',e,flush=True);return []
+        raw=_lb('intraday');bars=_lb('all')
+        if not raw:raw=list(bars)  # fallback: derive regular session from all-session bars
+        if not raw:raise RuntimeError('kline returned no bars (intraday and all)')
         for b in raw:b['ts']=int(datetime.fromisoformat(b['time'].replace('Z','+00:00')).timestamp())
         day=datetime.fromtimestamp(raw[-1]['ts'],ET).date()
         sess=[b for b in raw if datetime.fromtimestamp(b['ts'],ET).date()==day]
-        r2=subprocess.run([os.environ['LBSAFE'],'kline','QQQ.US','--period','1m','--count','1000','--session','all','--format','json'],capture_output=True,text=True,timeout=20)
-        try:bars=json.loads(r2.stdout)
-        except Exception:bars=[]
         try:
             if time.time()-OLD['t']>120 or not OLD['b']:
                 sd=str(datetime.fromtimestamp(raw[-1]['ts'],ET).date()-__import__('datetime').timedelta(days=1 if datetime.now(ET).weekday()!=0 else 3))
@@ -105,6 +108,7 @@ def kline():
         with lock:kc['d'],kc['t']=d,time.time()
         return d
     except Exception as e:
+        print('kline error:',repr(e),flush=True)
         return kc['d'] or {'error':str(e),'bars':[]}
 LWC=open(os.path.join(D,'static','lwc.js'),'rb').read()
 PAGE=open(os.path.join(D,'index.html'),'rb').read()
