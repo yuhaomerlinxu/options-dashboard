@@ -10,6 +10,7 @@ Blueprint: `render.yaml` (runtime docker, free plan, health check `/healthz`). R
 | `USSTOCK_MCP_KEY` | VIP MCP key |
 | `LONGBRIDGE_CLI_AUTH_B64` | `base64 -w0 ~/.longbridge/openapi/cli-auth` |
 | `LONGBRIDGE_CLI_REGISTRATION_B64` | `base64 -w0 ~/.longbridge/openapi/cli-registration` |
+| `LONGBRIDGE_MACHINE_ID` | contents of `/etc/machine-id` on the machine where `longbridge auth login` ran (the CLI encrypts its token with a machine-id-derived key; required) |
 | `LONGBRIDGE_DEVICE_ID` | contents of `~/.longbridge/openapi/device-id` (optional but recommended) |
 
 | `NTFY_TOPIC` | optional: ntfy.sh topic for QQQ 1/2/3m signal pushes |

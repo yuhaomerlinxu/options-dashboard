@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
  && [ "$(cut -d' ' -f1 $F.sha256)" = "$(sha256sum $F | cut -d' ' -f1)" ] \
  && tar xzf $F && install -m 755 $(find . -name longbridge -type f | head -1) /usr/local/bin/longbridge \
  && rm -rf /tmp/* && apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
-RUN useradd -m app
+RUN useradd -m app && rm -f /etc/machine-id && touch /etc/machine-id && mkdir -p /var/lib/dbus && touch /var/lib/dbus/machine-id && chown app:app /etc/machine-id /var/lib/dbus/machine-id
 WORKDIR /app
 COPY --chown=app:app server.py providers.py mcp_client.py entrypoint.sh lbsafe channels.json ./
 COPY --chown=app:app qqq/ qqq/
