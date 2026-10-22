@@ -104,7 +104,8 @@ def kline():
             h,l,cl,v=float(b['high']),float(b['low']),float(b['close']),float(b['volume'])
             pv+=(h+l+cl)/3*v;vv+=v;vw.append(round(pv/vv,4) if vv else cl)
         d={'symbol':'QQQ.US','session_date_et':str(day),'bars':[{'t':b['ts'],'o':float(b['open']),'h':float(b['high']),'l':float(b['low']),'c':float(b['close']),'v':float(b['volume'])} for b in bars],'vwap':vw,**out,
-           'day_high':max(float(b['high']) for b in sess),'day_low':min(float(b['low']) for b in sess),'error':None,'replay_signals':replay(raw,day)}
+           'day_high':max(float(b['high']) for b in sess),'day_low':min(float(b['low']) for b in sess),'error':None,'replay_signals':[]}
+        d['mtf_signals']=__import__('mtf').compute(d['bars'])
         with lock:kc['d'],kc['t']=d,time.time()
         return d
     except Exception as e:

@@ -13,7 +13,7 @@ button{background:#2d6cdf;color:#fff;border:0;border-radius:8px;padding:10px;wid
 <div class="muted" id="rsil" style="margin-top:2px">RSI(14) <span style="color:#f5c542">--</span></div><div id="rsic" style="height:12vh"></div>
 <div class="muted" id="stl">StochRSI(14,14,3,3) <span style="color:#4fc3f7">K --</span> <span style="color:#ff8a65">D --</span></div><div id="stc" style="height:12vh"></div><div class="muted" id="et"></div></div>
 <div class="card" id="ext"></div><div class="card" id="opt" style="display:none"></div>
-<div class="card"><b>1/2/3 分钟共振信号</b><div id="sigs" class="muted">暂无信号</div></div>
+<div class="card"><b>2/3/4/5 分钟共振信号</b> <span class="muted">（已收盘K线 · EMA20 · VWAP · 15分钟冷却）</span><div id="sigs" class="muted">暂无信号</div></div>
 <div class="muted" id="ts"></div>
 <script src="/qqq/static/lwc.js"></script>
 <script>
@@ -29,9 +29,9 @@ async function poll(){try{const r=await fetch(location.pathname.replace(/\/$/,''
 if(q){$('slab').textContent='QQQ '+(q.session_label||'');$('last').textContent=q.last;$('last').className='big '+cls(q.change_value);$('chg').innerHTML=`<span class="${cls(q.change_value)}">${q.change_value} (${q.change_percentage}%)</span>`;$('hi').textContent=q.high;$('lo').textContent=q.low;$('pc').textContent=q.prev_close;
 let h='<b>延长时段</b>';[['pre_market','盘前'],['post_market','盘后'],['overnight','夜盘']].forEach(([k,n])=>{const x=q[k];if(x)h+=`<div class="row"><span>${n}</span><span>${x.last} ${pct(+x.last,+x.prev_close)}</span></div><div class="muted" style="text-align:right">高 ${x.high} / 低 ${x.low} · ${x.time_bj||''}</div>`});$('ext').innerHTML=h}
 $('ts').textContent='数据时间（北京时间）：'+d.server_time_bj+(d.quote_error?' · 行情错误: '+d.quote_error:'');
-const a=d.alerts||[];curAlerts=a;if(cs){setMarkers();liveBar(q)}{const ml=mergeList(a);if(ml.length)$('sigs').innerHTML=ml.map(s=>{const b=String(s.direction).toLowerCase().startsWith('bull');return `<div class="sig ${b?'bull':'bear'}"><b class="${b?'up':'down'}">${b?'▲ BUY 看涨':'▼ SELL 看跌'}</b>${s.replay?' <span class=muted>[回放]</span>':''} · ${esc(s.price)}<br>触发：${esc(s.trigger_time_bj)}（北京）<br>日高/日低：${esc(f(s.day_high))} / ${esc(f(s.day_low))}<pre>${tf(s.timeframes)}</pre></div>`}).join('');}if(a.length){const o=a[0].options_0dte;if(o){$('opt').style.display='';$('opt').innerHTML='<b>期权信息（0DTE，最新信号）</b>'+opt(o)}
+const a=d.alerts||[];curAlerts=a;if(cs){setMarkers();liveBar(q)}renderSigs();if(a.length){const o=a[0].options_0dte;if(o){$('opt').style.display='';$('opt').innerHTML='<b>期权信息（0DTE，最新信号）</b>'+opt(o)}
 
-const k=a[0].trigger_time_bj+a[0].direction;if(lastKey!==null&&k!==lastKey){document.body.classList.remove('flash');void document.body.offsetWidth;document.body.classList.add('flash');beep();if(navigator.vibrate)navigator.vibrate([300,100,300])}lastKey=k}else if(lastKey===null)lastKey='';
+}else if(lastKey===null)lastKey='';
 }catch(e){$('ts').textContent='连接失败，重试中… '+e}}
 
 const BASE=location.pathname.replace(/\/$/,''),OFF=8*3600,DEMO=new URLSearchParams(location.search).has('demo');
@@ -56,6 +56,9 @@ function updSub(d){const T=d.bars.map(b=>b.t+OFF),r=rsiCalc(d.bars.map(b=>b.c),1
 const ser=a=>T.map((t,i)=>a[i]==null?{time:t}:{time:t,value:a[i]});rs.setData(ser(r));sk.setData(ser(k));sd.setData(ser(dd));
 const L=a=>{const v=a[a.length-1];return v==null?'--':v.toFixed(1)};$('rsil').innerHTML='RSI(14) <span style="color:#f5c542">'+L(r)+'</span> · 70/30';$('stl').innerHTML='StochRSI(14,14,3,3) <span style="color:#4fc3f7">K '+L(k)+'</span> <span style="color:#ff8a65">D '+L(dd)+'</span> · 80/20';
 const lr=ch.timeScale().getVisibleLogicalRange();if(lr){rc.timeScale().setVisibleLogicalRange(lr);sc.timeScale().setVisibleLogicalRange(lr)}}
+let sigKey=null;
+function renderSigs(){const ml=((kd&&kd.mtf_signals)||[]).slice().reverse();if(!kd)return;$('sigs').innerHTML=ml.length?ml.map(s=>{const b=s.direction==='bullish';return `<div class="sig ${b?'bull':'bear'}"><b class="${b?'up':'down'}">${b?'▲ BUY 看涨':'▼ SELL 看跌'}</b> <span class=muted>[${esc(s.session)}]</span> · ${esc(s.price)}<br>触发：${esc(s.trigger_time_bj)}（北京） / ${esc(s.trigger_time_et)}（美东）<br>时段高/低：${esc(s.day_high)} / ${esc(s.day_low)}<pre>${tf(s.timeframes)}</pre></div>`}).join(''):'暂无信号';
+const k=ml.length?ml[0].trigger_time_bj+ml[0].direction:'';if(sigKey!==null&&k&&k!==sigKey){document.body.classList.remove('flash');void document.body.offsetWidth;document.body.classList.add('flash');beep();if(navigator.vibrate)navigator.vibrate([300,100,300])}sigKey=k}
 function mergeList(a){const km=s=>String(s.trigger_time_bj).slice(0,16)+String(s.direction).slice(0,4),ks=new Set(a.map(km));return a.concat(((kd&&kd.replay_signals)||[]).filter(x=>x.direction&&!ks.has(km(x))).reverse()).sort((x,y)=>String(y.trigger_time_bj).localeCompare(String(x.trigger_time_bj)))}
 function bjToTs(s){const m=String(s).match(/(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d)/);if(!m)return null;return Date.UTC(+m[1],m[2]-1,+m[3],+m[4],+m[5])/1000}
 function setMarkers(){if(cs)cs.setMarkers([]);return;if(!kd||!kd.bars.length)return;let a=curAlerts.slice(),rs0=(kd.replay_signals||[]).filter(x=>x.direction);const km=s=>String(s.trigger_time_bj).slice(0,16)+String(s.direction).slice(0,4);const ks=new Set(a.map(km));rs0.forEach(x=>{if(!ks.has(km(x)))a.push(x)});
