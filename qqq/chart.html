@@ -5,7 +5,7 @@ input{width:90px;background:#1c2030;color:#fff;border:1px solid #333;border-radi
 <body><nav style="position:fixed;bottom:6px;left:8px;z-index:99;font:12px sans-serif;background:#111a;padding:3px 8px;border-radius:6px"><a href="/" style="color:#9cf;margin-right:10px">期权看板</a><a href="/qqq" style="color:#9cf;margin-right:10px">QQQ实时</a><a href="/qqq/chart?s=QQQ" style="color:#9cf;margin-right:10px">关键点位</a><a href="/qqq/radar" style="color:#fbbf24">期权雷达</a></nav><div id="top"><input id="sym" maxlength="10" placeholder="代码"><button id="go">查看</button>
 <span id="qb"></span><span><button data-p="5m" class="pb on">5分钟</button><button data-p="15m" class="pb">15分钟</button></span> <a href="/qqq">← QQQ页</a> <a href="/qqq/radar" style="color:#fbbf24">📡 期权雷达</a></div>
 <div id="hd"><span id="nm"></span> <span id="px">--</span> <span id="chg"></span> <span id="ext" style="color:#9aa;font-size:12px"></span></div><div id="err"></div>
-<div id="c"></div><div id="sp" style="padding:8px;font-size:12px;line-height:1.5"></div><div id="sg" style="padding:8px;font-size:12px;line-height:1.6"></div><div id="lg"></div>
+<div id="c"></div><div id="ri" style="padding:2px 8px;font-size:12px;color:#9aa">RSI / StochRSI 计算中…</div><div id="rc" style="width:100%;height:18vh"></div><div id="sp" style="padding:8px;font-size:12px;line-height:1.5"></div><div id="sg" style="padding:8px;font-size:12px;line-height:1.6"></div><div id="lg"></div>
 <script src="/qqq/static/lwc.js"></script><script>
 const B='/qqq';
 async function J(u){const r=await fetch(u,{cache:'no-store',headers:{'ngrok-skip-browser-warning':'1'}});const t=await r.text();try{return JSON.parse(t)}catch(e){throw new Error('HTTP '+r.status+' 非JSON响应')}}const U=new URLSearchParams(location.search);let S=(U.get('s')||'QQQ').toUpperCase(),P=U.get('p')=='15m'?'15m':'5m';
@@ -14,6 +14,20 @@ const ch=LightweightCharts.createChart(c,{layout:{background:{color:'#0e1117'},t
 const bg=ch.addHistogramSeries({priceScaleId:'bg',priceLineVisible:false,lastValueVisible:false});ch.priceScale('bg').applyOptions({scaleMargins:{top:0,bottom:0},visible:false});
 const cs=ch.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderVisible:false,wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
 const vs=ch.addHistogramSeries({priceScaleId:'v',priceFormat:{type:'volume'},priceLineVisible:false,lastValueVisible:false});ch.priceScale('v').applyOptions({scaleMargins:{top:.82,bottom:0}});
+
+const rch=LightweightCharts.createChart(rc,{layout:{background:{color:'#0e1117'},textColor:'#d1d4dc'},grid:{vertLines:{color:'#1a1e2a'},horzLines:{color:'#1a1e2a'}},timeScale:{timeVisible:true,secondsVisible:false,rightOffset:5,visible:false},rightPriceScale:{scaleMargins:{top:.05,bottom:.05},minimumWidth:60},crosshair:{mode:0}});
+ch.priceScale('right').applyOptions({minimumWidth:60});
+const rS=rch.addLineSeries({color:'#ffd54f',lineWidth:2,title:'RSI'}),kS=rch.addLineSeries({color:'#29b6f6',lineWidth:1,title:'%K'}),dS=rch.addLineSeries({color:'#ff7043',lineWidth:1,title:'%D'});
+[[70,'#ef5350'],[30,'#26a69a'],[80,'#ef535066'],[20,'#26a69a66']].forEach(([p,c])=>rS.createPriceLine({price:p,color:c,lineWidth:1,lineStyle:2,axisLabelVisible:false}));
+new ResizeObserver(()=>rch.applyOptions({width:rc.clientWidth,height:rc.clientHeight})).observe(rc);
+let _sy=0;ch.timeScale().subscribeVisibleLogicalRangeChange(r=>{if(_sy||!r)return;_sy=1;rch.timeScale().setVisibleLogicalRange(r);_sy=0});rch.timeScale().subscribeVisibleLogicalRangeChange(r=>{if(_sy||!r)return;_sy=1;ch.timeScale().setVisibleLogicalRange(r);_sy=0});
+function calcRSI(c,n=14){const o=Array(c.length).fill(null);if(c.length<=n)return o;let g=0,l=0;for(let i=1;i<=n;i++){const d=c[i]-c[i-1];d>0?g+=d:l-=d}g/=n;l/=n;o[n]=l==0?100:100-100/(1+g/l);for(let i=n+1;i<c.length;i++){const d=c[i]-c[i-1];g=(g*(n-1)+Math.max(d,0))/n;l=(l*(n-1)+Math.max(-d,0))/n;o[i]=l==0?100:100-100/(1+g/l)}return o}
+function sma(a,n){return a.map((_,i)=>{if(i<n-1)return null;let s=0;for(let j=i-n+1;j<=i;j++){if(a[j]==null)return null;s+=a[j]}return s/n})}
+function calcStoch(r,n=14,k=3,d=3){const st=r.map((v,i)=>{if(v==null||i<n-1)return null;const w=r.slice(i-n+1,i+1);if(w.some(x=>x==null))return null;const lo=Math.min(...w),hi=Math.max(...w);return hi==lo?50:(v-lo)/(hi-lo)*100});const K=sma(st,k);return [K,sma(K,d)]}
+function tag(v,hi,lo){return v==null?'--':`${v.toFixed(1)} <span style="color:${v>hi?'#ef5350':v<lo?'#26a69a':'#9aa'}">${v>hi?'超买':v<lo?'超卖':'中性'}</span>`}
+function drawRSI(bars,off){const c=bars.map(b=>b.c),r=calcRSI(c),[K,D]=calcStoch(r);const m=a=>bars.map((b,i)=>a[i]==null?{time:b.t+off}:{time:b.t+off,value:a[i]});rS.setData(m(r));kS.setData(m(K));dS.setData(m(D));const L=bars.length-1;
+ ri.innerHTML=`<b>RSI(14)</b> ${tag(r[L],70,30)} · <b>StochRSI(14,14,3,3)</b> %K ${tag(K[L],80,20)} / %D ${tag(D[L],80,20)} <span style="color:#666">(${P}K线)</span>`;
+ const lr=ch.timeScale().getVisibleLogicalRange();if(lr)rch.timeScale().setVisibleLogicalRange(lr)}
 new ResizeObserver(()=>ch.applyOptions({width:c.clientWidth,height:c.clientHeight})).observe(c);
 const _f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
 function etOff(t){const p={};_f.formatToParts(new Date(t*1000)).forEach(x=>p[x.type]=x.value);return (Date.UTC(+p.year,+p.month-1,+p.day,+p.hour%24,+p.minute,+p.second)-t*1000)/1000}
@@ -29,6 +43,7 @@ async function load(){const s=S,p=P;sym.value=S;nm.textContent=S;
  cs.setData(d.bars.map(b=>({time:b.t+off,open:b.o,high:b.h,low:b.l,close:b.c,...(b.ext?{color:b.c>=b.o?'#1b6f67':'#8c3533',wickColor:'#666'}:{})})));
  vs.setData(d.bars.map(b=>({time:b.t+off,value:b.v,color:b.c>=b.o?'#26a69a66':'#ef535066'})));
  bg.setData(d.bars.map(b=>({time:b.t+off,value:1,color:b.ext?'rgba(120,120,160,0.10)':'rgba(0,0,0,0)'})));
+ try{drawRSI(d.bars,off)}catch(e){ri.textContent='RSI计算失败 '+e.message}
  LV&&LV.k!=s&&(lines.forEach(l=>cs.removePriceLine(l)),lines=[]);if(fit){ch.timeScale().fitContent();fit=false}
  OFF=off;TS=new Set(d.bars.map(b=>b.t+off));loadSig(s);if(!SP||SP.symbol.replace(/\.US$/,'').replace(/^\./,'')!=s.replace(/^\./,''))slines.forEach(l=>cs.removePriceLine(l)),slines=[],SP=null;if(!SP)loadSp(s);else drawSp();SH=d.sess_high;SL=d.sess_low;if(!LV||LV.k!=s)lg.textContent='关键位计算中…（期权链首次约10-20秒）';else draw();loadLv(s);
  }catch(e){err.textContent='K线加载失败 '+e.message}}
