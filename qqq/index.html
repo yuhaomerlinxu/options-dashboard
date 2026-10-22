@@ -71,10 +71,17 @@ const T=b=>b.t+OFF;cs.setData(d.bars.map(b=>({time:T(b),open:b.o,high:b.h,low:b.
 vs.setData(d.bars.map(b=>({time:T(b),value:b.v,color:b.c>=b.o?'rgba(38,194,129,.5)':'rgba(255,77,79,.5)'})));
 [10,20,60,120].forEach(n=>em[n].setData(d.bars.map((b,i)=>({time:T(b),value:d['ema'+n][i]}))));vw.setData(d.bars.map((b,i)=>({time:T(b),value:d.vwap[i]})));
 if(hiL)cs.removePriceLine(hiL);if(loL)cs.removePriceLine(loL);
-hiL=cs.createPriceLine({price:d.day_high,color:'#26c281',lineStyle:2,lineWidth:1,axisLabelVisible:true,title:'日高'});loL=cs.createPriceLine({price:d.day_low,color:'#ff4d4f',lineStyle:2,lineWidth:1,axisLabelVisible:true,title:'日低'});
+hiL=cs.createPriceLine({price:d.day_high,color:'#26c281',lineStyle:2,lineWidth:1,axisLabelVisible:true,title:'最高价 - '+(+d.day_high).toFixed(2)});loL=cs.createPriceLine({price:d.day_low,color:'#ff4d4f',lineStyle:2,lineWidth:1,axisLabelVisible:true,title:'最低价 - '+(+d.day_low).toFixed(2)});
 updSub(d);setMarkers();if(!window._fit){window._fit=1;ch.timeScale().applyOptions({minBarSpacing:0.3});const n=d.bars.length;const fit=()=>{const w=$("chart").clientWidth-65;ch.timeScale().applyOptions({barSpacing:Math.max(0.3,w/(n+4))});ch.timeScale().scrollToRealTime()};fit();setTimeout(fit,500)}if(!$("et").textContent)$('et').textContent='交易日(美东) '+d.session_date_et+' · 时间轴为北京时间'+(DEMO?' · DEMO 演示信号':'')}catch(e){$('kinfo').textContent='K线加载失败 '+e}}
 function liveBar(q){if(!kd||!kd.bars.length||!q||!q.last)return;const b=kd.bars[kd.bars.length-1],p=+q.last;if(q.trade_status&&!/Normal/i.test(q.trade_status))return;const now=Math.floor(Date.now()/60000)*60;if(now-b.t>60)return;
 cs.update({time:b.t+OFF,open:b.o,high:Math.max(b.h,p),low:Math.min(b.l,p),close:p})}
 if(window.LightweightCharts){initChart();initSub();loadK();setInterval(()=>{if(!window._kb){window._kb=1;Promise.resolve(loadK()).finally(()=>window._kb=0)}},1000)}else $('chart').textContent='图表库加载失败';
+
+let KL=[],KV=null;
+function drawKL(){if(!cs||!KV)return;KL.forEach(l=>cs.removePriceLine(l));KL=[];const v=KV;const A=(p,c,t,st)=>{if(p!=null)KL.push(cs.createPriceLine({price:+p,color:c,lineWidth:1,lineStyle:st??2,axisLabelVisible:true,title:t+' - '+(+p).toFixed(2)}))};
+ A(v.iv_p2,'#b388ff','隐含波动 +2σ');A(v.iv_p1,'#b388ff','隐含波动 +1σ');A(v.iv_m1,'#b388ff','隐含波动 -1σ');A(v.iv_m2,'#b388ff','隐含波动 -2σ');
+ A(v.call_wall,'#ff4d4f','日内压力位',0);A(v.put_wall,'#26c281','日内支撑位',0);A(v.gamma_flip,'#ffd600','伽马场',0);A(v.max_pain,'#ffab00','多空分界线',1)}
+async function loadKL(){try{const v=await (await fetch(BASE+'/levels?s=QQQ',{cache:'no-store',headers:{'ngrok-skip-browser-warning':'1'}})).json();if(v.pending||v.retry){setTimeout(loadKL,4000);return}if(v.has_options){KV=v;drawKL()}}catch(e){setTimeout(loadKL,10000)}}
+loadKL();setInterval(loadKL,120000);
 poll();setInterval(poll,1000);
 </script></body></html>
