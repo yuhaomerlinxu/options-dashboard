@@ -69,6 +69,7 @@ def ema(v,n):
     for x in v:e=x if e is None else x*k+e*(1-k);o.append(round(e,4))
     return o
 OLD={'t':0,'b':[]}
+DCL={'t':0,'m':{}}
 def kline():
     with lock:
         if time.time()-kc['t']<3 and kc['d']:return kc['d']
@@ -105,7 +106,12 @@ def kline():
             pv+=(h+l+cl)/3*v;vv+=v;vw.append(round(pv/vv,4) if vv else cl)
         d={'symbol':'QQQ.US','session_date_et':str(day),'bars':[{'t':b['ts'],'o':float(b['open']),'h':float(b['high']),'l':float(b['low']),'c':float(b['close']),'v':float(b['volume'])} for b in bars],'vwap':vw,**out,
            'day_high':max(float(b['high']) for b in sess),'day_low':min(float(b['low']) for b in sess),'error':None,'replay_signals':[]}
-        d['mtf_signals']=__import__('mtf').compute(d['bars'])
+        try:
+            if time.time()-DCL['t']>600:
+                rd=subprocess.run([os.environ['LBSAFE'],'kline','QQQ.US','--period','day','--count','10','--format','json'],capture_output=True,text=True,timeout=15)
+                DCL['m']={__import__('datetime').date.fromisoformat(x['time'][:10]):float(x['close']) for x in json.loads(rd.stdout)};DCL['t']=time.time()
+        except Exception as e:print('daily kline failed:',e,flush=True)
+        d['mtf_signals']=__import__('mtf').compute(d['bars'],daily_close=DCL['m'])
         with lock:kc['d'],kc['t']=d,time.time()
         return d
     except Exception as e:

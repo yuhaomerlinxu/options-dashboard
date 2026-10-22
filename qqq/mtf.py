@@ -18,20 +18,22 @@ def session_of(ts):
     sd = (d - timedelta(days=1)).date() if m < 240 else d.date()
     return name, '%s-%s' % (sd, name)
 
-def compute(bars, now=None):
+def compute(bars, now=None, daily_close=None):
+    """daily_close: optional {date: regular close} (from daily kline) used when bars lack prior sessions."""
     """bars: list of {'t','o','h','l','c','v'} 1m, t = bar start epoch secs, sorted."""
     now = now or datetime.now(timezone.utc).timestamp()
     b1 = [b for b in bars if b['t'] + 60 <= now]  # closed 1m bars only
     k20 = 2 / 21
     agg = {tf: None for tf in TFS}; st = {tf: {'prev': None, 'last': None, 'ema': None, 'pema': None} for tf in TFS}
-    out = []; last = {}; sid0 = None; pv = vv = 0; sh = sl = None
+    out = []; last = {}; sid0 = None; pv = vv = 0; sh = sl = None; dcl = dict(daily_close or {})
     streak = (None, 0); rng = []; regc = {}; pc = None
     for i, b in enumerate(b1):
         name, sid = session_of(b['t'])
         if sid != sid0: sid0 = sid; pv = vv = 0; sh = sl = None; last = {}; streak = (None, 0)
         de = datetime.fromtimestamp(b['t'], ET); dm = de.hour * 60 + de.minute
         if 570 <= dm < 960: regc[de.date()] = b['c']
-        prior = [k for k in regc if k < de.date()]; pc = regc[max(prior)] if prior else None
+        pd_ = (de - timedelta(days=1)).date() if dm < 240 else de.date()
+        allc = {**dcl, **regc}; prior = [k for k in allc if k < pd_ or (dm >= 960 and k == pd_)]; pc = allc[max(prior)] if prior else None
         rng.append(b['h'] - b['l']); rng = rng[-31:]; atr = sum(rng) / len(rng)
         pv += (b['h'] + b['l'] + b['c']) / 3 * b['v']; vv += b['v']; vwap = pv / vv if vv else b['c']
         sh = b['h'] if sh is None else max(sh, b['h']); sl = b['l'] if sl is None else min(sl, b['l'])
