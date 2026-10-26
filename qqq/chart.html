@@ -9,7 +9,7 @@ input{width:90px;background:#1c2030;color:#fff;border:1px solid #333;border-radi
 <script src="/qqq/static/lwc.js"></script><script>
 const B='/qqq';
 async function J(u){const r=await fetch(u,{cache:'no-store',headers:{'ngrok-skip-browser-warning':'1'}});const t=await r.text();try{return JSON.parse(t)}catch(e){throw new Error('HTTP '+r.status+' 非JSON响应')}}const U=new URLSearchParams(location.search);let S=(U.get('s')||'QQQ').toUpperCase(),P=U.get('p')=='15m'?'15m':'5m';
-['SPX','QQQ','SPY','NVDA','TSLA','AAPL','COHR'].forEach(t=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>setS(t);qb.appendChild(b)});
+['SPX','QQQ','SPY','NVDA','TSLA','AAPL','AMD','COHR'].forEach(t=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>setS(t);qb.appendChild(b)});
 const ch=LightweightCharts.createChart(c,{layout:{background:{color:'#0e1117'},textColor:'#d1d4dc'},grid:{vertLines:{color:'#1a1e2a'},horzLines:{color:'#1a1e2a'}},timeScale:{timeVisible:true,secondsVisible:false,rightOffset:5},rightPriceScale:{scaleMargins:{top:.08,bottom:.22}},crosshair:{mode:0}});
 const bg=ch.addHistogramSeries({priceScaleId:'bg',priceLineVisible:false,lastValueVisible:false});ch.priceScale('bg').applyOptions({scaleMargins:{top:0,bottom:0},visible:false});
 const cs=ch.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderVisible:false,wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
