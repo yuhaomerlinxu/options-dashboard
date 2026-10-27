@@ -4,12 +4,12 @@ input{width:90px;background:#1c2030;color:#fff;border:1px solid #333;border-radi
 #hd{padding:0 8px;font-size:15px}#px{font-size:22px;font-weight:600}#c{width:100%;height:62vh}#lg{padding:8px;font-size:12px;line-height:1.6;color:#9aa}#lg b{display:inline-block;width:10px;height:3px;margin-right:4px;vertical-align:middle}a{color:#5b9cff}#err{color:#ff6b6b;padding:0 8px}</style></head>
 <body><nav style="position:fixed;bottom:6px;left:8px;z-index:99;font:12px sans-serif;background:#111a;padding:3px 8px;border-radius:6px"><a href="/" style="color:#9cf;margin-right:10px">期权看板</a><a href="/qqq" style="color:#9cf;margin-right:10px">QQQ实时</a><a href="/qqq/chart?s=QQQ" style="color:#9cf;margin-right:10px">关键点位</a><a href="/qqq/radar" style="color:#fbbf24">期权雷达</a></nav><div id="top"><input id="sym" maxlength="10" placeholder="代码"><button id="go">查看</button>
 <span id="qb"></span><span><button data-p="5m" class="pb on">5分钟</button><button data-p="15m" class="pb">15分钟</button></span> <a href="/qqq">← QQQ页</a> <a href="/qqq/radar" style="color:#fbbf24">📡 期权雷达</a></div>
-<div id="hd"><span id="nm"></span> <span id="px">--</span> <span id="chg"></span> <span id="ext" style="color:#9aa;font-size:12px"></span></div><div id="err"></div>
+<div id="vp" style="margin:0 8px 6px;background:#1a1f2b;border-radius:8px;padding:8px;font-size:12px;line-height:1.6">波动率面板加载中…</div><div id="hd"><span id="nm"></span> <span id="px">--</span> <span id="chg"></span> <span id="ext" style="color:#9aa;font-size:12px"></span></div><div id="err"></div>
 <div id="c"></div><div id="ri" style="padding:2px 8px;font-size:12px;color:#9aa">RSI / StochRSI 计算中…</div><div id="rc" style="width:100%;height:18vh"></div><div id="sp" style="padding:8px;font-size:12px;line-height:1.5"></div><div id="sg" style="padding:8px;font-size:12px;line-height:1.6"></div><div id="lg"></div>
 <script src="/qqq/static/lwc.js"></script><script>
 const B='/qqq';
 async function J(u){const r=await fetch(u,{cache:'no-store',headers:{'ngrok-skip-browser-warning':'1'}});const t=await r.text();try{return JSON.parse(t)}catch(e){throw new Error('HTTP '+r.status+' 非JSON响应')}}const U=new URLSearchParams(location.search);let S=(U.get('s')||'QQQ').toUpperCase(),P=U.get('p')=='15m'?'15m':'5m';
-['SPX','QQQ','SPY','NVDA','TSLA','AAPL','AMD','COHR'].forEach(t=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>setS(t);qb.appendChild(b)});
+['SPX','QQQ','SPY','MU','SNDK','NVDA','TSLA','AAPL','AMD','COHR'].forEach(t=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>setS(t);qb.appendChild(b)});
 const ch=LightweightCharts.createChart(c,{layout:{background:{color:'#0e1117'},textColor:'#d1d4dc'},grid:{vertLines:{color:'#1a1e2a'},horzLines:{color:'#1a1e2a'}},timeScale:{timeVisible:true,secondsVisible:false,rightOffset:5},rightPriceScale:{scaleMargins:{top:.08,bottom:.22}},crosshair:{mode:0}});
 const bg=ch.addHistogramSeries({priceScaleId:'bg',priceLineVisible:false,lastValueVisible:false});ch.priceScale('bg').applyOptions({scaleMargins:{top:0,bottom:0},visible:false});
 const cs=ch.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderVisible:false,wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
@@ -86,4 +86,20 @@ function draw(){const d={sess_high:SH,sess_low:SL};
 async function tick(){try{const d=await J(B+'/last?s='+S);if(d.error)return;px.textContent=(+d.last).toFixed(2);chg.textContent=d.chg+'%';chg.style.color=+d.chg>=0?'#26a69a':'#ef5350';
  ext.textContent=d.ext?({pre_market:'盘前',post_market:'盘后',overnight:'夜盘'}[d.ext.k])+' '+(+d.ext.last).toFixed(2):''}catch(e){}}
 load();tick();setInterval(()=>{if(!window._lb){window._lb=1;Promise.resolve(load()).finally(()=>window._lb=0)}},1000);setInterval(()=>loadSp(S),120000);setInterval(tick,1000);
+</script><script>
+(function(){const $=i=>document.getElementById(i),P=v=>v==null?'--':(v*100).toFixed(1)+'%',N=(v,d=2)=>v==null?'--':(+v).toFixed(d);let cur=null;
+function ix(o){if(!o)return'';if(o.error&&o.last==null)return`${o.name} --`;const c=o.prev?((o.last-o.prev)/o.prev*100):0;return `<b>${o.name}</b> ${N(o.last)} <span style="color:${c>=0?'#ff6b6b':'#26c281'}">${c>=0?'+':''}${c.toFixed(1)}%</span> <span style="color:#9aa">Rank ${N(o.rank,0)} · 百分位 ${N(o.pctl,0)}</span>`}
+function r(d){if(d.error){$('vp').innerHTML='波动率数据暂不可用：'+d.error;return}const iv=d.iv||{},e=d.em||{},sp=d.spot,col={'高':'#ff9f43','低':'#26c281','中':'#9cf'}[d.level]||'#ccc';
+const ivs=[['near','最近到期'],['week','下周'],['d30','~30天']].map(([k,n])=>{const x=iv[k];return x?`${n}(${x.exp.slice(5)},${x.dte}天) <b>${P(x.iv)}</b>`:''}).filter(Boolean).join(' · ');
+const pc=v=>v==null||!sp?'':` (${(v/sp*100).toFixed(2)}%)`;
+let h=`<div><b style="color:#fbbf24">📊 ${d.symbol.replace('.US','')} 波动率</b> <span style="color:#9aa">${d.t}</span></div>
+<div>ATM IV：${ivs||'--'+(d.iv_error?' ('+d.iv_error+')':'')}</div>
+<div>HV20（20日实际波动）<b>${P(d.hv20)}</b> · IV−HV <b style="color:${(d.spread||0)>0?'#ff9f43':'#26c281'}">${d.spread==null?'--':((d.spread>0?'+':'')+(d.spread*100).toFixed(1)+'pt')}</b></div>
+<div>预期波动：1日 ±$${N(e.d1)}${pc(e.d1)} · 1周 ±$${N(e.w1)}${pc(e.w1)}${e.week_straddle?` · 下周跨式 $${N(e.week_straddle)}${pc(e.week_straddle)}`:''}</div>
+<div>${ix(d.vxn)}${d.vxn?' · ':''}${ix(d.vix)}${d.vxn?' <span style="color:#777">（IV Rank/百分位以VXN代理）</span>':''}</div>`;
+if(d.earnings)h+=`<div>📅 下次财报：<b>${d.earnings.date}</b> ${d.earnings.when||''} <span style="color:#9aa">${d.earnings.content||''}</span></div>`;else if(!/^(QQQ|SPY|\.SPX)/.test(d.symbol))h+='<div style="color:#777">📅 下次财报：暂无（120天内未公布）</div>';
+if(d.hint)h+=`<div style="color:${col}">💡 ${d.hint} <span style="color:#777">[${d.level_basis||''}]</span></div>`;
+$('vp').innerHTML=h}
+async function load(){const s=(typeof S!=='undefined'?S:'QQQ');if(s!==cur){cur=s;$('vp').innerHTML='波动率面板加载中…'}try{const t=await (await fetch(B+'/vol?s='+encodeURIComponent(s),{cache:'no-store'})).json();if(s===cur)r(t)}catch(e){$('vp').innerHTML='波动率数据连接失败（休市或数据缺失），稍后重试'}}
+load();setInterval(load,60000);setInterval(()=>{if(typeof S!=='undefined'&&S!==cur)load()},1500)})();
 </script></body></html>
