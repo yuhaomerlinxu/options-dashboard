@@ -4,8 +4,8 @@ input{width:90px;background:#1c2030;color:#fff;border:1px solid #333;border-radi
 #hd{padding:0 8px;font-size:15px}#px{font-size:22px;font-weight:600}#c{width:100%;height:62vh}#lg{padding:8px;font-size:12px;line-height:1.6;color:#9aa}#lg b{display:inline-block;width:10px;height:3px;margin-right:4px;vertical-align:middle}a{color:#5b9cff}#err{color:#ff6b6b;padding:0 8px}</style></head>
 <body><nav style="position:fixed;bottom:6px;left:8px;z-index:99;font:12px sans-serif;background:#111a;padding:3px 8px;border-radius:6px"><a href="/" style="color:#9cf;margin-right:10px">期权看板</a><a href="/qqq" style="color:#9cf;margin-right:10px">QQQ实时</a><a href="/qqq/chart?s=QQQ" style="color:#9cf;margin-right:10px">关键点位</a><a href="/qqq/radar" style="color:#fbbf24">期权雷达</a></nav><div id="top"><input id="sym" maxlength="10" placeholder="代码"><button id="go">查看</button>
 <span id="qb"></span><span><button data-p="5m" class="pb on">5分钟</button><button data-p="15m" class="pb">15分钟</button></span> <a href="/qqq">← QQQ页</a> <a href="/qqq/radar" style="color:#fbbf24">📡 期权雷达</a></div>
-<div id="vp" style="margin:0 8px 6px;background:#1a1f2b;border-radius:8px;padding:6px 8px;font-size:12px"><div id="vh">波动率加载中…</div><div id="vc" style="height:150px;margin-top:4px"></div></div><div id="hd"><span id="nm"></span> <span id="px">--</span> <span id="chg"></span> <span id="ext" style="color:#9aa;font-size:12px"></span></div><div id="err"></div>
-<div id="c"></div><div id="ri" style="padding:2px 8px;font-size:12px;color:#9aa">RSI / StochRSI 计算中…</div><div id="rc" style="width:100%;height:18vh"></div><div id="sp" style="padding:8px;font-size:12px;line-height:1.5"></div><div id="sg" style="padding:8px;font-size:12px;line-height:1.6"></div><div id="lg"></div>
+<div id="vp" style="margin:0 8px 6px;background:#1a1f2b;border-radius:10px;padding:8px;text-align:center"><div id="vg">IV仪表加载中…</div><div id="vh" style="font-size:11px;color:#888;margin-top:2px"></div></div><div id="hd"><span id="nm"></span> <span id="px">--</span> <span id="chg"></span> <span id="ext" style="color:#9aa;font-size:12px"></span></div><div id="err"></div>
+<div id="c"></div><div id="ri" style="padding:2px 8px;font-size:12px;color:#9aa">RSI / StochRSI 计算中…</div><div id="rc" style="width:100%;height:18vh"></div><div id="sp" style="display:none;padding:8px;font-size:12px;line-height:1.5"></div><div id="sg" style="display:none;padding:8px;font-size:12px;line-height:1.6"></div><div id="lg"></div>
 <script src="/qqq/static/lwc.js"></script><script>
 const B='/qqq';
 async function J(u){const r=await fetch(u,{cache:'no-store',headers:{'ngrok-skip-browser-warning':'1'}});const t=await r.text();try{return JSON.parse(t)}catch(e){throw new Error('HTTP '+r.status+' 非JSON响应')}}const U=new URLSearchParams(location.search);let S=(U.get('s')||'QQQ').toUpperCase(),P=U.get('p')=='15m'?'15m':'5m';
@@ -49,14 +49,14 @@ async function load(){const s=S,p=P;sym.value=S;nm.textContent=S;
  }catch(e){err.textContent='K线加载失败 '+e.message}}
 let LV=null,SH,SL,OFF=0,SG=null;
 let TS=new Set(),SP=null,slines=[],SHOW={7:true,10:true};
-async function loadSig(s){try{const r=await J(B+'/signals?s='+s);if(s!=S||r.error)return;SG=r;
+async function loadSig(s){return;try{const r=await J(B+'/signals?s='+s);if(s!=S||r.error)return;SG=r;
  const mk=r.signals.filter(x=>TS.has(x.t+OFF)).map(x=>({time:x.t+OFF,position:x.side=='B'?'belowBar':'aboveBar',color:x.side=='B'?'#00e676':'#ff1744',shape:x.side=='B'?'arrowUp':'arrowDown',text:x.label}));cs.setMarkers(mk);
  const st=r.stats||{};let h='<b>📍 入场信号（美股常规时段15分钟收盘K线；时间=北京时间）</b><br>';
  if(st.n)h+=`<span style="color:#888">回测(约7个月15m): ${st.n}次, 30分钟方向正确${(st.hit30*100).toFixed(0)}%, 60分钟${(st.hit60*100).toFixed(0)}%, 收盘${(st.hitc*100).toFixed(0)}%, 中位逆向${(+st.mae_med).toFixed(2)}ATR</span><br>`;
  if(!r.signals.length)h+='近期无信号<br>';
  r.signals.slice().reverse().slice(0,8).forEach(x=>{const k=x.strikes_rv;h+=`<span style="color:${x.side=='B'?'#00e676':'#ff5252'}">${x.side=='B'?'▲ Bull Put':'▼ Bear Call'}</span> 北京${x.time_bj} 价${x.price} ${x.held.join('/')} RSI${x.rsi} 卖腿(RV估算) 7天 ${k[7]} · 10天 ${k[10]}${x.today?' <b>今日</b>':' 当日收'+x.day_close}<br>`});
  sg.innerHTML=h}catch(e){}}
-async function loadSp(s){try{const r=await J(B+'/spreads?s='+s);if(s!=S)return;if(r.pending||r.retry){sp.innerHTML='安全行权价计算中…（首次约15-40秒）';setTimeout(()=>loadSp(s),5000);return}if(r.error){sp.textContent='价差计算失败 '+r.error;return}SP=r;drawSp()}catch(e){sp.textContent='价差加载失败 '+e.message}}
+async function loadSp(s){return;try{const r=await J(B+'/spreads?s='+s);if(s!=S)return;if(r.pending||r.retry){sp.innerHTML='安全行权价计算中…（首次约15-40秒）';setTimeout(()=>loadSp(s),5000);return}if(r.error){sp.textContent='价差计算失败 '+r.error;return}SP=r;drawSp()}catch(e){sp.textContent='价差加载失败 '+e.message}}
 function bk(x){return x.bucket}
 function drawSp(){const r=SP;if(!r)return;slines.forEach(l=>cs.removePriceLine(l));slines=[];const f=r.proxy?r.ratio:1;
  const col={B:{7:'#00e676',10:'#2e7d32'},S:{7:'#ff1744',10:'#b71c1c'}},sty={7:0,10:2};
@@ -87,25 +87,20 @@ async function tick(){try{const d=await J(B+'/last?s='+S);if(d.error)return;px.t
  ext.textContent=d.ext?({pre_market:'盘前',post_market:'盘后',overnight:'夜盘'}[d.ext.k])+' '+(+d.ext.last).toFixed(2):''}catch(e){}}
 load();tick();setInterval(()=>{if(!window._lb){window._lb=1;Promise.resolve(load()).finally(()=>window._lb=0)}},1000);setInterval(()=>loadSp(S),120000);setInterval(tick,1000);
 </script><script>
-(function(){const $=i=>document.getElementById(i),N=(v,d=2)=>v==null?'--':(+v).toFixed(d),P=v=>v==null?'--':(v*100).toFixed(1)+'%';let cur=null,vc,sN,s3,sP,key='';
-const ch=(a,b,pt)=>{if(a==null||b==null)return'';const d=pt?(a-b)*100:a-b,c=d>=0?'#ff6b6b':'#26c281';return ` <span style="color:${c}">${d>=0?'+':''}${d.toFixed(pt?1:2)}${pt?'pt':''}</span>`};
+(function(){const $=i=>document.getElementById(i),N=(v,d=1)=>v==null?'--':(+v).toFixed(d),P=v=>v==null?'--':(v*100).toFixed(1)+'%';let cur=null;
 const tm=t=>new Date(t*1000).toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false,hour:'2-digit',minute:'2-digit'});
-const C=(n,v)=>`<span style="display:inline-block;margin-right:12px;white-space:nowrap"><span style="color:#888">${n}</span> <b>${v}</b></span>`;
-function init(){vc=LightweightCharts.createChart($('vc'),{autoSize:true,layout:{background:{color:'#1a1f2b'},textColor:'#999',fontSize:10},grid:{vertLines:{visible:false},horzLines:{color:'#262c3a'}},timeScale:{timeVisible:true,secondsVisible:false},leftPriceScale:{visible:true},rightPriceScale:{visible:true}});
-sN=vc.addLineSeries({color:'#ff9f43',lineWidth:2,priceScaleId:'left',title:'近月IV',priceFormat:{type:'custom',formatter:v=>v.toFixed(1)+'%'}});
-s3=vc.addLineSeries({color:'#4fc3f7',lineWidth:2,priceScaleId:'left',title:'IV30',priceFormat:{type:'custom',formatter:v=>v.toFixed(1)+'%'}});
-sP=vc.addLineSeries({color:'#888',lineWidth:1,priceScaleId:'right',title:'价格'})}
-function r(d){if(d.error){$('vh').textContent='波动率数据暂不可用：'+d.error;return}if(!(d.last&&d.last.t)){$('vh').textContent=d.symbol.replace('.US','')+' 波动率 · 首次采样中（约1分钟）…';return}const L=d.last||{},f=d.first||{},n=L.near||{},t=L.d30||{},sl=d.slow||{},sp=L.spot;
-const em1=t.iv&&sp?sp*t.iv*Math.sqrt(1/252):null,pc=v=>v&&sp?` (${(v/sp*100).toFixed(2)}%)`:'';
-let h=`<div style="margin-bottom:2px"><b style="color:#fbbf24">${d.symbol.replace('.US','')} 波动率</b> ${d.open?'<span style="color:#26c281">● 实时</span>':'<span style="color:#ff6b6b">● 休市</span>'} <span style="color:#888">更新 ${L.t?tm(L.t):'--'} 北京时间 · 1分钟</span></div>`;
-h+=C(`近月IV(${(n.exp||'').slice(5)})`,P(n.iv)+ch(n.iv,f.ivn,1))+C(`IV30(${(t.exp||'').slice(5)})`,P(t.iv)+ch(t.iv,f.iv30,1))+C('HV20',P(sl.hv20))+C('IV30−HV20',t.iv&&sl.hv20?((t.iv-sl.hv20)*100).toFixed(1)+'pt':'--');
-h+=C('近月跨式',n.strad?'$'+N(n.strad)+pc(n.strad)+ch(n.strad,f.strad):'--')+C('1日预期',em1?'±$'+N(em1)+pc(em1):'--')+C('1周预期',em1?'±$'+N(em1*Math.sqrt(5))+pc(em1*Math.sqrt(5)):'--');
-if(L.vix)h+=C('VIX',N(L.vix.last)+ch(L.vix.last,L.vix.open));
-if(L.vxn)h+=C('VXN <span style="color:#777">延迟</span>',N(L.vxn.last)+ch(L.vxn.last,L.vxn.prev));
-if(sl.earnings)h+=C('财报',sl.earnings.date+' '+(sl.earnings.when||''));
-$('vh').innerHTML=h;if(!vc)init();
-const S0=d.series||[],o=8*3600;sN.setData(S0.filter(x=>x.ivn).map(x=>({time:x.t+o,value:x.ivn*100})));s3.setData(S0.filter(x=>x.iv30).map(x=>({time:x.t+o,value:x.iv30*100})));sP.setData(S0.map(x=>({time:x.t+o,value:x.px})));
-const k=d.symbol+S0.length;if(k!==key){key=k;vc.timeScale().fitContent()}}
-async function load(){const s=(typeof S!=='undefined'?S:'QQQ');if(s!==cur){cur=s;key='';$('vh').textContent='波动率加载中…'}try{const t=await (await fetch(B+'/vol?s='+encodeURIComponent(s),{cache:'no-store'})).json();if(s===cur)r(t)}catch(e){$('vh').textContent='波动率数据连接失败，重试中…'}}
+function arc(a0,a1,c){const R=90,cx=110,cy=105,p=a=>[cx+R*Math.cos(Math.PI*(1-a/100)),cy-R*Math.sin(Math.PI*(1-a/100))],[x0,y0]=p(a0),[x1,y1]=p(a1);return `<path d="M${x0} ${y0} A${R} ${R} 0 0 1 ${x1} ${y1}" stroke="${c}" stroke-width="18" fill="none"/>`}
+function svg(v){const a=Math.PI*(1-(v==null?0:Math.max(0,Math.min(100,v)))/100),x=110+78*Math.cos(a),y=105-78*Math.sin(a);
+return `<svg viewBox="0 0 220 120" style="width:min(320px,90vw)">${arc(0,30,'#26c281')}${arc(30,70,'#f5c542')}${arc(70,100,'#ff4d4f')}
+<text x="18" y="118" fill="#777" font-size="9">0</text><text x="195" y="118" fill="#777" font-size="9">100</text>
+${v==null?'':`<line x1="110" y1="105" x2="${x}" y2="${y}" stroke="#fff" stroke-width="3" stroke-linecap="round"/>`}<circle cx="110" cy="105" r="6" fill="#fff"/></svg>`}
+function r(d){if(d.error){$('vg').textContent='IV数据暂不可用：'+d.error;return}const g=d.gauge||{},L=d.last||{},sc=g.score,st=sc==null?'--':sc<30?'偏低':sc>70?'偏高':'正常',col=sc==null?'#888':sc<30?'#26c281':sc>70?'#ff4d4f':'#f5c542';
+const lo=g.kind=='vxn'?N(g.lo):P(g.lo),hi=g.kind=='vxn'?N(g.hi):P(g.hi);
+$('vg').innerHTML=`<div style="font-size:13px;color:#fbbf24">${d.symbol.replace('.US','')} IV 高低 ${d.open?'<span style="color:#26c281">●实时</span>':'<span style="color:#ff6b6b">●休市</span>'}</div>${svg(sc)}
+<div style="margin-top:-4px;font-size:30px;font-weight:700;color:${col}">${sc==null?'--':Math.round(sc)}</div><div style="font-size:16px;color:${col};font-weight:600">${st}</div>
+<div style="font-size:12px;color:#bbb;margin-top:4px">IV30 <b>${P(g.iv30)}</b>${g.kind=='vxn'?` · VXN ${N(g.cur)}`:''} · 52周 ${lo} – ${hi}</div>
+<div style="font-size:10px;color:#777">${g.basis||''}</div>`;
+const n=L.near||{};$('vh').textContent=`近月IV ${P(n.iv)} · HV20 ${P((d.slow||{}).hv20)}${L.vix?' · VIX '+N(L.vix.last,2):''} · 更新 ${L.t?tm(L.t):'--'} 北京时间`}
+async function load(){const s=(typeof S!=='undefined'?S:'QQQ');if(s!==cur){cur=s;$('vg').textContent='IV仪表加载中…';$('vh').textContent=''}try{const t=await (await fetch(B+'/vol?s='+encodeURIComponent(s),{cache:'no-store'})).json();if(s===cur){if(!(t.last&&t.last.t)&&!t.error){$('vg').textContent=s+' IV仪表 · 首次采样中（约1分钟）…';return}r(t)}}catch(e){$('vg').textContent='IV数据连接失败，重试中…'}}
 load();setInterval(load,15000);setInterval(()=>{if(typeof S!=='undefined'&&S!==cur)load()},1500)})();
 </script></body></html>

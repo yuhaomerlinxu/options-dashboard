@@ -80,6 +80,11 @@ def sample(s):
         snap=list(ser)
     try:json.dump(snap,open(fpath(s,d),'w'))
     except Exception:pass
+    if t['iv'] and is_open(n_):
+        try:
+            fp=os.path.join(D,'ivd_%s.json'%s.replace('.','_'));h=json.load(open(fp)) if os.path.exists(fp) else {}
+            h[d]=t['iv'];json.dump(h,open(fp,'w'))
+        except Exception:pass
 def loop():
     for s in SYMS:
         with _lk:SER[s]=load_disk(s)
@@ -106,6 +111,28 @@ def api(sym):
         except Exception as e:return {'error':str(e)[:120]}
         with _lk:ser=list(SER.get(s,[]));L=dict(LAST.get(s,{}))
     sl=V.slow(s) if hasattr(V,'slow') else {}
-    o={'symbol':s,'open':is_open(),'now':int(time.time()),'last':L,'series':ser,'slow':sl}
+    o={'gauge':gauge(s,L,sl),'symbol':s,'open':is_open(),'now':int(time.time()),'last':L,'series':ser,'slow':sl}
     if ser:o['first']=ser[0]
     return o
+
+def pctl(x,arr):return round(sum(1 for a in arr if a<x)/len(arr)*100,1)
+def gauge(s,L,sl):
+    iv=(L.get('d30') or {}).get('iv')
+    try:
+        fp=os.path.join(D,'ivd_%s.json'%s.replace('.','_'));h=json.load(open(fp)) if os.path.exists(fp) else {}
+    except Exception:h={}
+    g={'iv30':iv,'days_recorded':len(h)}
+    if iv and len(h)>=120:
+        a=list(h.values())[-252:];g.update(score=pctl(iv,a),lo=min(a),hi=max(a),basis='IV30 自身历史百分位（%d个交易日记录）'%len(a),kind='iv')
+        return g
+    if s=='QQQ.US':
+        try:
+            vn=V.cboe_now('VXN');hist=[c for _,c in V.cboe_hist('VXN')][-252:];cur=vn['last']
+            g.update(score=pctl(cur,hist),lo=min(hist),hi=max(hist),cur=cur,basis='VXN 52周百分位（纳指100隐含波动率指数，Cboe延迟）',kind='vxn')
+        except Exception as e:g['error']=str(e)[:80]
+        return g
+    try:
+        a=V.hv_series(s)
+        if iv and a:g.update(score=pctl(iv,a),lo=round(min(a),4),hi=round(max(a),4),basis='代理：当前IV30在过去一年滚动HV30分布中的百分位',kind='hv')
+    except Exception as e:g['error']=str(e)[:80]
+    return g

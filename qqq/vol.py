@@ -14,7 +14,7 @@ def cboe_now(ix):
     def f():
         d=json.loads(_http('https://cdn.cboe.com/api/global/delayed_quotes/quotes/_%s.json'%ix))['data']
         return {'last':d.get('current_price'),'prev':d.get('prev_day_close'),'src':'Cboe(延迟)'}
-    return C.cached(('cboen',ix),120,f)
+    return C.cached(('cboen',ix),60,f)
 def index(ix):
     o={'name':ix}
     try:
@@ -123,3 +123,12 @@ def slow(sym):
             except Exception as e:o['earnings_error']=str(e)[:80]
         return o
     return C.cached(('slow',s),1800,f)
+def hv_series(s,n=30):
+    def f():
+        b=C.lb(['kline',s,'--period','day','--count','300'],20)
+        c=[float(x['close']) for x in b];r=[math.log(c[i]/c[i-1]) for i in range(1,len(c))]
+        out=[]
+        for i in range(n,len(r)+1):
+            w=r[i-n:i];m=sum(w)/n;out.append(math.sqrt(sum((x-m)**2 for x in w)/(n-1)*252))
+        return out[-252:]
+    return C.cached(('hvs',s),3600,f)
