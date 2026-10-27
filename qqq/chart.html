@@ -4,7 +4,7 @@ input{width:90px;background:#1c2030;color:#fff;border:1px solid #333;border-radi
 #hd{padding:0 8px;font-size:15px}#px{font-size:22px;font-weight:600}#c{width:100%;height:62vh}#lg{padding:8px;font-size:12px;line-height:1.6;color:#9aa}#lg b{display:inline-block;width:10px;height:3px;margin-right:4px;vertical-align:middle}a{color:#5b9cff}#err{color:#ff6b6b;padding:0 8px}</style></head>
 <body><nav style="position:fixed;bottom:6px;left:8px;z-index:99;font:12px sans-serif;background:#111a;padding:3px 8px;border-radius:6px"><a href="/" style="color:#9cf;margin-right:10px">期权看板</a><a href="/qqq" style="color:#9cf;margin-right:10px">QQQ实时</a><a href="/qqq/chart?s=QQQ" style="color:#9cf;margin-right:10px">关键点位</a><a href="/qqq/radar" style="color:#fbbf24">期权雷达</a></nav><div id="top"><input id="sym" maxlength="10" placeholder="代码"><button id="go">查看</button>
 <span id="qb"></span><span><button data-p="5m" class="pb on">5分钟</button><button data-p="15m" class="pb">15分钟</button></span> <a href="/qqq">← QQQ页</a> <a href="/qqq/radar" style="color:#fbbf24">📡 期权雷达</a></div>
-<div id="vp" style="margin:0 8px 6px;background:#1a1f2b;border-radius:8px;padding:8px;font-size:12px;line-height:1.6">波动率面板加载中…</div><div id="hd"><span id="nm"></span> <span id="px">--</span> <span id="chg"></span> <span id="ext" style="color:#9aa;font-size:12px"></span></div><div id="err"></div>
+<div id="vp" style="margin:0 8px 6px;background:#1a1f2b;border-radius:8px;padding:6px 8px;font-size:12px"><div id="vh">波动率加载中…</div><div id="vc" style="height:150px;margin-top:4px"></div></div><div id="hd"><span id="nm"></span> <span id="px">--</span> <span id="chg"></span> <span id="ext" style="color:#9aa;font-size:12px"></span></div><div id="err"></div>
 <div id="c"></div><div id="ri" style="padding:2px 8px;font-size:12px;color:#9aa">RSI / StochRSI 计算中…</div><div id="rc" style="width:100%;height:18vh"></div><div id="sp" style="padding:8px;font-size:12px;line-height:1.5"></div><div id="sg" style="padding:8px;font-size:12px;line-height:1.6"></div><div id="lg"></div>
 <script src="/qqq/static/lwc.js"></script><script>
 const B='/qqq';
@@ -87,19 +87,25 @@ async function tick(){try{const d=await J(B+'/last?s='+S);if(d.error)return;px.t
  ext.textContent=d.ext?({pre_market:'盘前',post_market:'盘后',overnight:'夜盘'}[d.ext.k])+' '+(+d.ext.last).toFixed(2):''}catch(e){}}
 load();tick();setInterval(()=>{if(!window._lb){window._lb=1;Promise.resolve(load()).finally(()=>window._lb=0)}},1000);setInterval(()=>loadSp(S),120000);setInterval(tick,1000);
 </script><script>
-(function(){const $=i=>document.getElementById(i),P=v=>v==null?'--':(v*100).toFixed(1)+'%',N=(v,d=2)=>v==null?'--':(+v).toFixed(d);let cur=null;
-function ix(o){if(!o)return'';if(o.error&&o.last==null)return`${o.name} --`;const c=o.prev?((o.last-o.prev)/o.prev*100):0;return `<b>${o.name}</b> ${N(o.last)} <span style="color:${c>=0?'#ff6b6b':'#26c281'}">${c>=0?'+':''}${c.toFixed(1)}%</span> <span style="color:#9aa">Rank ${N(o.rank,0)} · 百分位 ${N(o.pctl,0)}</span>`}
-function r(d){if(d.error){$('vp').innerHTML='波动率数据暂不可用：'+d.error;return}const iv=d.iv||{},e=d.em||{},sp=d.spot,col={'高':'#ff9f43','低':'#26c281','中':'#9cf'}[d.level]||'#ccc';
-const ivs=[['near','最近到期'],['week','下周'],['d30','~30天']].map(([k,n])=>{const x=iv[k];return x?`${n}(${x.exp.slice(5)},${x.dte}天) <b>${P(x.iv)}</b>`:''}).filter(Boolean).join(' · ');
-const pc=v=>v==null||!sp?'':` (${(v/sp*100).toFixed(2)}%)`;
-let h=`<div><b style="color:#fbbf24">📊 ${d.symbol.replace('.US','')} 波动率</b> <span style="color:#9aa">${d.t}</span></div>
-<div>ATM IV：${ivs||'--'+(d.iv_error?' ('+d.iv_error+')':'')}</div>
-<div>HV20（20日实际波动）<b>${P(d.hv20)}</b> · IV−HV <b style="color:${(d.spread||0)>0?'#ff9f43':'#26c281'}">${d.spread==null?'--':((d.spread>0?'+':'')+(d.spread*100).toFixed(1)+'pt')}</b></div>
-<div>预期波动：1日 ±$${N(e.d1)}${pc(e.d1)} · 1周 ±$${N(e.w1)}${pc(e.w1)}${e.week_straddle?` · 下周跨式 $${N(e.week_straddle)}${pc(e.week_straddle)}`:''}</div>
-<div>${ix(d.vxn)}${d.vxn?' · ':''}${ix(d.vix)}${d.vxn?' <span style="color:#777">（IV Rank/百分位以VXN代理）</span>':''}</div>`;
-if(d.earnings)h+=`<div>📅 下次财报：<b>${d.earnings.date}</b> ${d.earnings.when||''} <span style="color:#9aa">${d.earnings.content||''}</span></div>`;else if(!/^(QQQ|SPY|\.SPX)/.test(d.symbol))h+='<div style="color:#777">📅 下次财报：暂无（120天内未公布）</div>';
-if(d.hint)h+=`<div style="color:${col}">💡 ${d.hint} <span style="color:#777">[${d.level_basis||''}]</span></div>`;
-$('vp').innerHTML=h}
-async function load(){const s=(typeof S!=='undefined'?S:'QQQ');if(s!==cur){cur=s;$('vp').innerHTML='波动率面板加载中…'}try{const t=await (await fetch(B+'/vol?s='+encodeURIComponent(s),{cache:'no-store'})).json();if(s===cur)r(t)}catch(e){$('vp').innerHTML='波动率数据连接失败（休市或数据缺失），稍后重试'}}
-load();setInterval(load,60000);setInterval(()=>{if(typeof S!=='undefined'&&S!==cur)load()},1500)})();
+(function(){const $=i=>document.getElementById(i),N=(v,d=2)=>v==null?'--':(+v).toFixed(d),P=v=>v==null?'--':(v*100).toFixed(1)+'%';let cur=null,vc,sN,s3,sP,key='';
+const ch=(a,b,pt)=>{if(a==null||b==null)return'';const d=pt?(a-b)*100:a-b,c=d>=0?'#ff6b6b':'#26c281';return ` <span style="color:${c}">${d>=0?'+':''}${d.toFixed(pt?1:2)}${pt?'pt':''}</span>`};
+const tm=t=>new Date(t*1000).toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false,hour:'2-digit',minute:'2-digit'});
+const C=(n,v)=>`<span style="display:inline-block;margin-right:12px;white-space:nowrap"><span style="color:#888">${n}</span> <b>${v}</b></span>`;
+function init(){vc=LightweightCharts.createChart($('vc'),{autoSize:true,layout:{background:{color:'#1a1f2b'},textColor:'#999',fontSize:10},grid:{vertLines:{visible:false},horzLines:{color:'#262c3a'}},timeScale:{timeVisible:true,secondsVisible:false},leftPriceScale:{visible:true},rightPriceScale:{visible:true}});
+sN=vc.addLineSeries({color:'#ff9f43',lineWidth:2,priceScaleId:'left',title:'近月IV',priceFormat:{type:'custom',formatter:v=>v.toFixed(1)+'%'}});
+s3=vc.addLineSeries({color:'#4fc3f7',lineWidth:2,priceScaleId:'left',title:'IV30',priceFormat:{type:'custom',formatter:v=>v.toFixed(1)+'%'}});
+sP=vc.addLineSeries({color:'#888',lineWidth:1,priceScaleId:'right',title:'价格'})}
+function r(d){if(d.error){$('vh').textContent='波动率数据暂不可用：'+d.error;return}if(!(d.last&&d.last.t)){$('vh').textContent=d.symbol.replace('.US','')+' 波动率 · 首次采样中（约1分钟）…';return}const L=d.last||{},f=d.first||{},n=L.near||{},t=L.d30||{},sl=d.slow||{},sp=L.spot;
+const em1=t.iv&&sp?sp*t.iv*Math.sqrt(1/252):null,pc=v=>v&&sp?` (${(v/sp*100).toFixed(2)}%)`:'';
+let h=`<div style="margin-bottom:2px"><b style="color:#fbbf24">${d.symbol.replace('.US','')} 波动率</b> ${d.open?'<span style="color:#26c281">● 实时</span>':'<span style="color:#ff6b6b">● 休市</span>'} <span style="color:#888">更新 ${L.t?tm(L.t):'--'} 北京时间 · 1分钟</span></div>`;
+h+=C(`近月IV(${(n.exp||'').slice(5)})`,P(n.iv)+ch(n.iv,f.ivn,1))+C(`IV30(${(t.exp||'').slice(5)})`,P(t.iv)+ch(t.iv,f.iv30,1))+C('HV20',P(sl.hv20))+C('IV30−HV20',t.iv&&sl.hv20?((t.iv-sl.hv20)*100).toFixed(1)+'pt':'--');
+h+=C('近月跨式',n.strad?'$'+N(n.strad)+pc(n.strad)+ch(n.strad,f.strad):'--')+C('1日预期',em1?'±$'+N(em1)+pc(em1):'--')+C('1周预期',em1?'±$'+N(em1*Math.sqrt(5))+pc(em1*Math.sqrt(5)):'--');
+if(L.vix)h+=C('VIX',N(L.vix.last)+ch(L.vix.last,L.vix.open));
+if(L.vxn)h+=C('VXN <span style="color:#777">延迟</span>',N(L.vxn.last)+ch(L.vxn.last,L.vxn.prev));
+if(sl.earnings)h+=C('财报',sl.earnings.date+' '+(sl.earnings.when||''));
+$('vh').innerHTML=h;if(!vc)init();
+const S0=d.series||[],o=8*3600;sN.setData(S0.filter(x=>x.ivn).map(x=>({time:x.t+o,value:x.ivn*100})));s3.setData(S0.filter(x=>x.iv30).map(x=>({time:x.t+o,value:x.iv30*100})));sP.setData(S0.map(x=>({time:x.t+o,value:x.px})));
+const k=d.symbol+S0.length;if(k!==key){key=k;vc.timeScale().fitContent()}}
+async function load(){const s=(typeof S!=='undefined'?S:'QQQ');if(s!==cur){cur=s;key='';$('vh').textContent='波动率加载中…'}try{const t=await (await fetch(B+'/vol?s='+encodeURIComponent(s),{cache:'no-store'})).json();if(s===cur)r(t)}catch(e){$('vh').textContent='波动率数据连接失败，重试中…'}}
+load();setInterval(load,15000);setInterval(()=>{if(typeof S!=='undefined'&&S!==cur)load()},1500)})();
 </script></body></html>

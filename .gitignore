@@ -8,3 +8,4 @@ __pycache__/
 qqq/alerts.jsonl
 qqq/radar_data/
 qqq/data/
+qqq/vol_data/

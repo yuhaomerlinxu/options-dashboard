@@ -144,13 +144,13 @@ class Mixin:
             self.send(200,json.dumps(r,ensure_ascii=False).encode(),'application/json; charset=utf-8')
         elif p=='/qqq'+'/vol':
             sy=parse_qs(urlparse(self.path).query).get('s',['QQQ'])[0]
-            try:r=vol.api(sy)
+            try:r=vollive.api(sy)
             except Exception as e:r={'error':str(e)}
             self.send(200,json.dumps(r,ensure_ascii=False).encode(),'application/json; charset=utf-8')
         elif p.startswith('/qqq'+'/radar'):radar.handle(self,p,'')
         elif p=='/qqq'+'/static/lwc.js':self.send(200,LWC,'application/javascript')
         else:self.send(404,b'not found','text/plain')
-import radar,vol
+import radar,vol,vollive
 def _volwarm():
     while True:
         for x in ('QQQ','MU','SNDK'):
@@ -158,7 +158,7 @@ def _volwarm():
             except Exception:pass
         time.sleep(240)
 def start():
-    threading.Thread(target=_volwarm,daemon=True).start()
+    vollive.start()
     radar.start()  # radar scheduler thread (was radar_run.sh)
     threading.Thread(target=chartapi.prewarm,daemon=True).start()
     threading.Thread(target=spread_engine.prewarm,daemon=True).start()

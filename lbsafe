@@ -2,7 +2,7 @@
 """Read-only Longbridge CLI wrapper. Only market-data subcommands pass; everything else (orders, trades, alerts, auth...) is refused."""
 import os, sys
 REAL = os.environ.get("LONGBRIDGE_BIN", "/usr/local/bin/longbridge")
-ALLOWED = (("quote",), ("option", "chain"), ("option", "quote"), ("kline",), ("finance-calendar", "report"), ("trading", "days"))
+ALLOWED = (("quote",), ("option", "chain"), ("option", "quote"), ("kline",), ("finance-calendar", "report"), ("trading", "days"), ("depth",))
 a = sys.argv[1:]
 if not a or not any(tuple(a[:len(x)]) == x for x in ALLOWED) or (a[0] == "kline" and len(a) > 1 and a[1] not in ("history",) and a[1].startswith("-")):
     sys.stderr.write("lbsafe: blocked non-market-data command %r\n" % a[:2]); sys.exit(13)

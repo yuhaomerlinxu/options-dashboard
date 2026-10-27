@@ -109,3 +109,17 @@ def compute(sym):
         try:o['earnings']=earnings(s)
         except Exception as e:o['earnings_error']=str(e)[:80]
     return o
+def slow(sym):
+    """HV20, VIX/VXN 52w rank, earnings — refreshed every 30 min."""
+    s=C.norm(sym)
+    def f():
+        o={}
+        try:o['hv20']=round(hv(s),4)
+        except Exception as e:o['hv_error']=str(e)[:80]
+        o['vix']=index('VIX')
+        if s in('QQQ.US','TQQQ.US','SQQQ.US','QQQM.US'):o['vxn']=index('VXN')
+        if not s.startswith('.') and s not in('QQQ.US','SPY.US'):
+            try:o['earnings']=earnings(s)
+            except Exception as e:o['earnings_error']=str(e)[:80]
+        return o
+    return C.cached(('slow',s),1800,f)
