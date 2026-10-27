@@ -29,7 +29,7 @@ def compute(bars, now=None, daily_close=None):
     streak = (None, 0); rng = []; regc = {}; pc = None
     for i, b in enumerate(b1):
         name, sid = session_of(b['t'])
-        if sid != sid0: sid0 = sid; pv = vv = 0; sh = sl = None; last = {}; streak = (None, 0)
+        if sid != sid0: sid0 = sid; pv = vv = 0; sh = sl = None; last = {}; streak = (None, 0); rng = []  # ATR per session: thin pre-market ranges must not set the open's NO-CHASE threshold
         de = datetime.fromtimestamp(b['t'], ET); dm = de.hour * 60 + de.minute
         if 570 <= dm < 960: regc[de.date()] = b['c']
         pd_ = (de - timedelta(days=1)).date() if dm < 240 else de.date()
