@@ -1,12 +1,12 @@
 """2/3/4/5-minute resonance signals built from 1m bars (closed bars only, no repaint).
 v2 filters (backtest 2026-08-20..10-22 QQQ 1m, regular session; 30m accuracy 44% -> 58%):
- - PERSIST: resonance must hold on 2 consecutive closed 1m bars
+ - PERSIST: resonance on 1 closed 1m bar (was 2; changed 2026-10-27 per user)
  - NO-CHASE: |1m close - VWAP| < EXT_ATR x ATR(avg 1m range of last 31 bars)
  - GAP-ALIGN: BUY only above prior regular-session close, SELL only below it"""
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 ET = ZoneInfo('America/New_York'); BJ = timezone(timedelta(hours=8))
-TFS = (2, 3, 4, 5); COOLDOWN = 15 * 60; PERSIST = 2; EXT_ATR = 2.0
+TFS = (2, 3, 4, 5); COOLDOWN = 15 * 60; PERSIST = 1; EXT_ATR = 2.0
 
 def session_of(ts):
     d = datetime.fromtimestamp(ts, ET); m = d.hour * 60 + d.minute
