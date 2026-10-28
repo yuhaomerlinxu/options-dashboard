@@ -31,4 +31,4 @@ def features(bars):
         out.append(dict(b,et=d,m=m,rth=rth,day=d.date(),e10=E[10][i],e20=E[20][i],e60=E[60][i],e120=E[120][i],rsi=R[i],k=K[i]*100,dd=D[i]*100,vwap=pv/vv if vv else b['c']))
     return out
 def load():
-    A=json.load(open('/tmp/all.json'));return A['bars']
+    A=json.load(open('/tmp/all2.json'));return A['bars']
