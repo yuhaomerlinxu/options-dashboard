@@ -111,11 +111,10 @@ def kline():
                 rd=subprocess.run([os.environ['LBSAFE'],'kline','QQQ.US','--period','day','--count','10','--format','json'],capture_output=True,text=True,timeout=15)
                 DCL['m']={__import__('datetime').date.fromisoformat(x['time'][:10]):float(x['close']) for x in json.loads(rd.stdout)};DCL['t']=time.time()
         except Exception as e:print('daily kline failed:',e,flush=True)
-        d['mtf_signals']=__import__('mtf').compute(d['bars'],daily_close=DCL['m'])
-        for x in d['mtf_signals']:x.setdefault('strategy','旧规则MTF')
+        d['mtf_signals']=[]  # old 2/3/4/5m MTF rule retired 2026-10-28 per user; only the new rule is shown
         try:
             import importlib.util as U;sp=U.spec_from_file_location('v3live',os.path.join(D,'v3','live.py'));V=U.module_from_spec(sp);sp.loader.exec_module(V)
-            d['mtf_signals']=sorted(d['mtf_signals']+V.compute(d['bars']),key=lambda x:x['ts'])
+            d['mtf_signals']=V.compute(d['bars'])
         except Exception as e:print('v3 signals failed:',repr(e),flush=True)
         with lock:kc['d'],kc['t']=d,time.time()
         return d
