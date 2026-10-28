@@ -4,7 +4,17 @@
          now close back through EMA10 and beyond previous bar's low (high) -> PUT (CALL)
  REV only until 10:30 ET (REV_END); cooldown COOL min per direction; no new signals after 15:45 ET."""
 from feat import *
-P=dict(REV_END=630,OPENVOL=3.0,RSI_HI=72,RSI_LO=38,SWING=30,RECENT=5,COOL=10,LAST=945)
+P=dict(CONF='e20call',REV_END=630,OPENVOL=3.0,RSI_HI=72,RSI_LO=38,SWING=30,RECENT=8,COOL=10,LAST=945)
+def conf(p,F,i,sg):
+    c=p['CONF'];f=F[i]
+    if c=='base':return True
+    if c=='e20':return (f['c']-f['e20'])*sg>0
+    if c=='e20call':return sg<0 or f['c']>f['e20']
+    if c=='hl':  # extreme not set on this or previous bar (higher low / lower high)
+        k=lambda x:x['l'] if sg>0 else -x['h']
+        return min(k(F[i]),k(F[i-1]))>min(k(x) for x in F[i-6:i-1])
+    if c=='hl+e20call':return conf(dict(p,CONF='hl'),F,i,sg) and conf(dict(p,CONF='e20call'),F,i,sg)
+    return True
 def signals(F,**kw):
     p={**P,**kw};out=[];last={}
     for i,f in enumerate(F):
@@ -21,8 +31,8 @@ def signals(F,**kw):
         if not d and f['m']<p['REV_END']:
             W=F[i-p['SWING']+1:i+1];R=F[i-p['RECENT']+1:i+1];rs=[x['rsi'] for x in F[i-9:i+1]]
             hh=max(x['h'] for x in W);ll=min(x['l'] for x in W)
-            if any(x['h']==hh for x in R) and max(rs)>=p['RSI_HI'] and f['c']<f['e10'] and f['c']<pr['l']:d,why='PUT','REV'
-            elif any(x['l']==ll for x in R) and min(rs)<=p['RSI_LO'] and f['c']>f['e10'] and f['c']>pr['h']:d,why='CALL','REV'
+            if any(x['h']==hh for x in R) and max(rs)>=p['RSI_HI'] and f['c']<f['e10'] and f['c']<pr['l'] and conf(p,F,i,-1):d,why='PUT','REV'
+            elif any(x['l']==ll for x in R) and min(rs)<=p['RSI_LO'] and f['c']>f['e10'] and f['c']>pr['h'] and conf(p,F,i,1):d,why='CALL','REV'
         if not d:continue
         if d in last and f['t']-last[d]<p['COOL']*60:continue
         last[d]=f['t']
