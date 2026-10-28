@@ -116,6 +116,20 @@ def kline():
             import importlib.util as U;sp=U.spec_from_file_location('v3live',os.path.join(D,'v3','live.py'));V=U.module_from_spec(sp);sp.loader.exec_module(V)
             d['mtf_signals']=V.compute(d['bars'])
         except Exception as e:print('v3 signals failed:',repr(e),flush=True)
+        # chart shows 2-minute bars (signals above stay on 1m); EMAs/VWAP recomputed on 2m
+        b2=[]
+        for b in d['bars']:
+            t=b['t']-b['t']%120
+            if b2 and b2[-1]['t']==t:x=b2[-1];x['h']=max(x['h'],b['h']);x['l']=min(x['l'],b['l']);x['c']=b['c'];x['v']+=b['v']
+            else:b2.append(dict(b,t=t))
+        d['bars']=b2;d['period']='2m';c2=[b['c'] for b in b2]
+        for n in(10,20,60,120):d['ema%d'%n]=ema(c2,n)
+        pv=vv=0;vw=[]
+        for b in b2:
+            dt=datetime.fromtimestamp(b['t'],ET)
+            if dt.hour==9 and dt.minute==30:pv=vv=0
+            pv+=(b['h']+b['l']+b['c'])/3*b['v'];vv+=b['v'];vw.append(round(pv/vv,4) if vv else b['c'])
+        d['vwap']=vw
         with lock:kc['d'],kc['t']=d,time.time()
         return d
     except Exception as e:

@@ -9,7 +9,7 @@ button{background:#2d6cdf;color:#fff;border:0;border-radius:8px;padding:10px;wid
 <div class="card"><div class="muted" id="slab">QQQ</div><div id="last" class="big">--</div><div id="chg"></div>
 <div class="row"><span>今日最高</span><span id="hi">--</span></div><div class="row"><span>今日最低</span><span id="lo">--</span></div>
 <div class="row"><span>昨收</span><span id="pc">--</span></div></div>
-<div class="card" style="padding:6px"><div class="muted" id="kinfo">1分钟K线 · EMA<span style="color:#f5c542">10</span>/<span style="color:#4fc3f7">20</span>/<span style="color:#ff8a65">60</span>/<span style="color:#e0e0e0">120</span> · <span style="color:#b388ff">VWAP</span></div><div id="chart" style="height:50vh;position:relative"></div>
+<div class="card" style="padding:6px"><div class="muted" id="kinfo">2分钟K线 · EMA<span style="color:#f5c542">10</span>/<span style="color:#4fc3f7">20</span>/<span style="color:#ff8a65">60</span>/<span style="color:#e0e0e0">120</span> · <span style="color:#b388ff">VWAP</span></div><div id="chart" style="height:50vh;position:relative"></div>
 <div class="muted" id="rsil" style="margin-top:2px">RSI(14) <span style="color:#f5c542">--</span></div><div id="rsic" style="height:12vh"></div>
 <div class="muted" id="stl">StochRSI(14,14,3,3) <span style="color:#4fc3f7">K --</span> <span style="color:#ff8a65">D --</span></div><div id="stc" style="height:12vh"></div><div class="muted" id="et"></div></div>
 <div class="card" id="ext"></div><div class="card" id="opt" style="display:none"></div>
@@ -73,7 +73,7 @@ vs.setData(d.bars.map(b=>({time:T(b),value:b.v,color:b.c>=b.o?'rgba(38,194,129,.
 if(hiL)cs.removePriceLine(hiL);if(loL)cs.removePriceLine(loL);
 hiL=cs.createPriceLine({price:d.day_high,color:'#26c281',lineStyle:2,lineWidth:1,axisLabelVisible:true,title:'最高价 - '+(+d.day_high).toFixed(2)});loL=cs.createPriceLine({price:d.day_low,color:'#ff4d4f',lineStyle:2,lineWidth:1,axisLabelVisible:true,title:'最低价 - '+(+d.day_low).toFixed(2)});
 updSub(d);setMarkers();if(!window._fit){window._fit=1;ch.timeScale().applyOptions({minBarSpacing:0.3});const n=d.bars.length;const fit=()=>{const w=$("chart").clientWidth-65;ch.timeScale().applyOptions({barSpacing:Math.max(0.3,w/(n+4))});ch.timeScale().scrollToRealTime()};fit();setTimeout(fit,500)}if(!$("et").textContent)$('et').textContent='交易日(美东) '+d.session_date_et+' · 时间轴为北京时间'+(DEMO?' · DEMO 演示信号':'')}catch(e){$('kinfo').textContent='K线加载失败 '+e}}
-function liveBar(q){if(!kd||!kd.bars.length||!q||!q.last)return;const b=kd.bars[kd.bars.length-1],p=+q.last;if(q.trade_status&&!/Normal/i.test(q.trade_status))return;const now=Math.floor(Date.now()/60000)*60;if(now-b.t>60)return;
+function liveBar(q){if(!kd||!kd.bars.length||!q||!q.last)return;const b=kd.bars[kd.bars.length-1],p=+q.last;if(q.trade_status&&!/Normal/i.test(q.trade_status))return;const now=Math.floor(Date.now()/60000)*60;if(now-b.t>=120)return;
 cs.update({time:b.t+OFF,open:b.o,high:Math.max(b.h,p),low:Math.min(b.l,p),close:p})}
 if(window.LightweightCharts){initChart();initSub();loadK();setInterval(()=>{if(!window._kb){window._kb=1;Promise.resolve(loadK()).finally(()=>window._kb=0)}},1000)}else $('chart').textContent='图表库加载失败';
 
