@@ -46,7 +46,7 @@ function sma(a,n){return a.map((_,i)=>{if(i<n-1)return null;let s=0;for(let j=i-
 function calcStoch(r,n=14,k=3,d=3){const st=r.map((v,i)=>{if(v==null||i<n-1)return null;const w=r.slice(i-n+1,i+1);if(w.some(x=>x==null))return null;const lo=Math.min(...w),hi=Math.max(...w);return hi==lo?50:(v-lo)/(hi-lo)*100});const K=sma(st,k);return [K,sma(K,d)]}
 function tag(v,hi,lo){return v==null?'--':`${v.toFixed(1)} <span style="color:${v>hi?'#ef5350':v<lo?'#26a69a':'#9aa'}">${v>hi?'超买':v<lo?'超卖':'中性'}</span>`}
 function drawRSI(bars,off){const c=bars.map(b=>b.c),r=calcRSI(c),[K,D]=calcStoch(r);const m=a=>bars.map((b,i)=>a[i]==null?{time:b.t+off}:{time:b.t+off,value:a[i]});rS.setData(m(r));kS.setData(m(K));dS.setData(m(D));const L=bars.length-1;
- ri.innerHTML=`<b>RSI(14)</b> ${tag(r[L],70,30)} · <b>StochRSI(14,14,3,3)</b> %K ${tag(K[L],80,20)} / %D ${tag(D[L],80,20)} <span style="color:#666">(${P}K线)</span>`;const rv=r[L],kU=K[L-1]!=null&&K[L-1]<20&&K[L]>=K[L-1]&&K[L]>D[L]&&K[L-1]<=D[L-1],kD=K[L-1]!=null&&K[L-1]>80&&K[L]<=K[L-1]&&K[L]<D[L]&&K[L-1]>=D[L-1];const bs=(rv<30||kU)?['#26a69a','偏多：可考虑 Call / Bull Call Spread']:(rv>70||kD)?['#ef5350','偏空：可考虑 Put / Bear Put Spread']:['#9aa','中性：观望'];ri.innerHTML+=` · <b style="color:${bs[0]}">${bs[1]}</b> <span style="color:#666">（仅供参考）</span>`;
+ ri.innerHTML=`<b>RSI(14)</b> ${tag(r[L],70,30)} · <b>StochRSI(14,14,3,3)</b> %K ${tag(K[L],80,20)} / %D ${tag(D[L],80,20)} <span style="color:#666">(${P}K线)</span>`;
  const lr=ch.timeScale().getVisibleLogicalRange();if(lr)rch.timeScale().setVisibleLogicalRange(lr)}
 new ResizeObserver(()=>ch.applyOptions({width:c.clientWidth,height:c.clientHeight})).observe(c);
 const _f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -83,7 +83,7 @@ function drawSp(){const r=SP;if(!r)return;slines.forEach(l=>cs.removePriceLine(l
  const col={B:{7:'#00e676',10:'#2e7d32'},S:{7:'#ff1744',10:'#b71c1c'}},sty={7:0,10:2};
  r.spreads.forEach(x=>{const b=bk(x);if(!SHOW[b])return;['B','S'].forEach(sd=>{const y=x[sd];if(!y||y.error)return;const p=r.proxy?y.spx_short:y.short;
   slines.push(cs.createPriceLine({price:p,color:col[sd][b],lineWidth:b==7?2:1,lineStyle:sty[b],axisLabelVisible:true,title:(sd=='B'?'BPS ':'BCS ')+x.label+' 卖'+p}))})});
- const bi=r.bias||{},bc={bull:['#00e676','偏多→优先 Bull Put'],bear:['#ff5252','偏空→优先 Bear Call'],neutral:['#ffd600','中性→双边/铁鹰']}[bi.bias]||['#888','-'];
+ const bi=r.bias||{},bc={bull:['#00e676','偏多'],bear:['#ff5252','偏空'],neutral:['#ffd600','中性']}[bi.bias]||['#888','-'];
  let h=`<div style="margin:4px 0"><span style="background:${bc[0]};color:#000;border-radius:4px;padding:1px 6px">${bc[1]}</span> <span style="color:#888">${(bi.why||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span></div>`;
  h+=`<div>显示: ${[7,10].map(b=>`<label><input type="checkbox" ${SHOW[b]?'checked':''} onchange="SHOW[${b}]=this.checked;drawSp()">${b}天</label>`).join(' ')}</div>`;
  h+=`<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:11px;white-space:nowrap"><tr style="color:#888"><td>到期</td><td>类型</td><td>卖/买</td><td>Δ</td><td>触碰≈</td><td>收入 成交/理论</td><td>最大亏损</td><td>盈亏平衡</td><td>历史触碰/收盘破</td><td>信号后破(n)</td></tr>`;
