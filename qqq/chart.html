@@ -5,7 +5,7 @@ input{width:90px;background:#1c2030;color:#fff;border:1px solid #333;border-radi
 <body><nav style="position:fixed;bottom:6px;left:8px;z-index:99;font:12px sans-serif;background:#111a;padding:3px 8px;border-radius:6px"><a href="/" style="color:#9cf;margin-right:10px">期权看板</a><a href="/qqq" style="color:#9cf;margin-right:10px">QQQ实时</a><a href="/qqq/chart?s=QQQ" style="color:#9cf;margin-right:10px">关键点位</a><a href="/qqq/radar" style="color:#fbbf24">期权雷达</a></nav><div id="top"><input id="sym" maxlength="10" placeholder="代码"><button id="go">查看</button>
 <span id="qb"></span><span><button data-p="5m" class="pb on">5分钟</button><button data-p="15m" class="pb">15分钟</button></span> <a href="/qqq">← QQQ页</a> <a href="/qqq/radar" style="color:#fbbf24">📡 期权雷达</a></div>
 <div id="vp" style="margin:0 8px 6px;background:#1a1f2b;border-radius:10px;padding:8px;text-align:center"><div id="vg">IV仪表加载中…</div><div id="vh" style="font-size:11px;color:#888;margin-top:2px"></div></div><div id="hd"><span id="nm"></span> <span id="px">--</span> <span id="chg"></span> <span id="ext" style="color:#9aa;font-size:12px"></span></div><div id="err"></div>
-<div id="c"></div><div id="ri" style="padding:2px 8px;font-size:12px;color:#9aa">RSI / StochRSI 计算中…</div><div id="rc" style="width:100%;height:18vh"></div><div id="sp" style="display:none;padding:8px;font-size:12px;line-height:1.5"></div><div id="sg" style="display:none;padding:8px;font-size:12px;line-height:1.6"></div><div id="lg"></div>
+<div id="emlg" style="font-size:12px;padding:2px 8px;color:#bbb">EMA EMA7 EMA20 EMA30 EMA70 EMA110 EMA250</div><div id="c" style="position:relative"><canvas id="emcv" style="position:absolute;left:0;top:0;pointer-events:none;z-index:3"></canvas></div><div id="ri" style="padding:2px 8px;font-size:12px;color:#9aa">RSI / StochRSI 计算中…</div><div id="rc" style="width:100%;height:18vh"></div><div id="sp" style="display:none;padding:8px;font-size:12px;line-height:1.5"></div><div id="sg" style="display:none;padding:8px;font-size:12px;line-height:1.6"></div><div id="lg"></div>
 <script src="/qqq/static/lwc.js"></script><script>
 const B='/qqq';
 async function J(u){const r=await fetch(u,{cache:'no-store',headers:{'ngrok-skip-browser-warning':'1'}});const t=await r.text();try{return JSON.parse(t)}catch(e){throw new Error('HTTP '+r.status+' 非JSON响应')}}const U=new URLSearchParams(location.search);let S=(U.get('s')||'QQQ').toUpperCase(),P=U.get('p')=='15m'?'15m':'5m';
@@ -14,6 +14,26 @@ const ch=LightweightCharts.createChart(c,{layout:{background:{color:'#0e1117'},t
 const bg=ch.addHistogramSeries({priceScaleId:'bg',priceLineVisible:false,lastValueVisible:false});ch.priceScale('bg').applyOptions({scaleMargins:{top:0,bottom:0},visible:false});
 const cs=ch.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderVisible:false,wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
 const vs=ch.addHistogramSeries({priceScaleId:'v',priceFormat:{type:'volume'},priceLineVisible:false,lastValueVisible:false});ch.priceScale('v').applyOptions({scaleMargins:{top:.82,bottom:0}});
+
+/* EMA7 line + EMA20/30 blue hatched cloud + EMA110/250 gold hatched cloud, on the bars shown (5m/15m) */
+const EMX={P:[7,20,30,70,110,250],C:{7:'#e0e0e0',20:'#2f7bff',30:'#2f7bff',70:'#26c6da',110:'#d4a017',250:'#d4a017'},s:{},v:{},T:[],
+emaA(c,n){const k=2/(n+1),o=[];let e=null;c.forEach(x=>{e=e==null?x:x*k+e*(1-k);o.push(e)});return o},
+init(){[7,20,30,110,250].forEach(n=>this.s[n]=ch.addLineSeries({color:this.C[n],lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false}));
+ ch.timeScale().subscribeVisibleLogicalRangeChange(()=>this.draw());new ResizeObserver(()=>this.draw()).observe(c);
+ ch.subscribeCrosshairMove(p=>this.leg(p&&p.time?this.T.indexOf(p.time):-1))},
+set(bars,off){const cl=bars.map(b=>b.c);this.T=bars.map(b=>b.t+off);this.P.forEach(n=>this.v[n]=this.emaA(cl,n));
+ [7,20,30,110,250].forEach(n=>this.s[n].setData(this.T.map((t,i)=>({time:t,value:this.v[n][i]}))));this.leg(-1);requestAnimationFrame(()=>this.draw())},
+leg(i){const el=document.getElementById('emlg');if(!this.T.length){el.textContent='EMA --';return}if(i<0)i=this.T.length-1;el.innerHTML='EMA '+this.P.map(n=>`<span style="color:${this.C[n]}">EMA${n} ${this.v[n][i].toFixed(2)}</span>`).join(' ')},
+draw(){const cv=document.getElementById('emcv');if(!cv)return;const w=c.clientWidth,h=c.clientHeight,dp=window.devicePixelRatio||1;cv.width=w*dp;cv.height=h*dp;cv.style.width=w+'px';cv.style.height=h+'px';
+ const g=cv.getContext('2d');g.setTransform(dp,0,0,dp,0,0);g.clearRect(0,0,w,h);if(!this.T.length)return;
+ const pw=w-ch.priceScale('right').width(),ts=ch.timeScale();g.save();g.beginPath();g.rect(0,0,pw,h);g.clip();g.lineWidth=1;
+ const band=(a,b,col)=>{g.strokeStyle=col;let lastX=-9;g.beginPath();for(let i=0;i<this.T.length;i++){const x=ts.timeToCoordinate(this.T[i]);if(x==null||x<0||x>pw)continue;
+  const nx=i+1<this.T.length?ts.timeToCoordinate(this.T[i+1]):null,sp=nx!=null?nx-x:3;
+  for(let dx=0;dx<Math.max(sp,1);dx+=3){const X=x+dx;if(X-lastX<3)continue;const f=sp>0?dx/sp:0,j=Math.min(i+1,this.T.length-1);
+   const va=this.v[a][i]+(this.v[a][j]-this.v[a][i])*f,vb=this.v[b][i]+(this.v[b][j]-this.v[b][i])*f;
+   const y1=cs.priceToCoordinate(va),y2=cs.priceToCoordinate(vb);if(y1==null||y2==null)continue;g.moveTo(X+.5,y1);g.lineTo(X+.5,y2);lastX=X}}g.stroke()};
+ band(20,30,'rgba(47,123,255,.45)');band(110,250,'rgba(230,180,20,.45)');g.restore()}};
+EMX.init();
 
 const rch=LightweightCharts.createChart(rc,{layout:{background:{color:'#0e1117'},textColor:'#d1d4dc'},grid:{vertLines:{color:'#1a1e2a'},horzLines:{color:'#1a1e2a'}},timeScale:{timeVisible:true,secondsVisible:false,rightOffset:5,visible:false},rightPriceScale:{scaleMargins:{top:.05,bottom:.05},minimumWidth:60},crosshair:{mode:0}});
 ch.priceScale('right').applyOptions({minimumWidth:60});
@@ -43,6 +63,7 @@ async function load(){const s=S,p=P;sym.value=S;nm.textContent=S;
  cs.setData(d.bars.map(b=>({time:b.t+off,open:b.o,high:b.h,low:b.l,close:b.c,...(b.ext?{color:b.c>=b.o?'#1b6f67':'#8c3533',wickColor:'#666'}:{})})));
  vs.setData(d.bars.map(b=>({time:b.t+off,value:b.v,color:b.c>=b.o?'#26a69a66':'#ef535066'})));
  bg.setData(d.bars.map(b=>({time:b.t+off,value:1,color:b.ext?'rgba(120,120,160,0.10)':'rgba(0,0,0,0)'})));
+ try{EMX.set(d.bars,off)}catch(e){console.error(e)}
  try{drawRSI(d.bars,off)}catch(e){ri.textContent='RSI计算失败 '+e.message}
  LV&&LV.k!=s&&(lines.forEach(l=>cs.removePriceLine(l)),lines=[]);if(fit){ch.timeScale().fitContent();fit=false}
  OFF=off;TS=new Set(d.bars.map(b=>b.t+off));loadSig(s);if(!SP||SP.symbol.replace(/\.US$/,'').replace(/^\./,'')!=s.replace(/^\./,''))slines.forEach(l=>cs.removePriceLine(l)),slines=[],SP=null;if(!SP)loadSp(s);else drawSp();SH=d.sess_high;SL=d.sess_low;if(!LV||LV.k!=s)lg.textContent='关键位计算中…（期权链首次约10-20秒）';else draw();loadLv(s);
