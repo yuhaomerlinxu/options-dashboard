@@ -9,13 +9,34 @@ button{background:#2d6cdf;color:#fff;border:0;border-radius:8px;padding:10px;wid
 <div class="card"><div class="muted" id="slab">QQQ</div><div id="last" class="big">--</div><div id="chg"></div>
 <div class="row"><span>今日最高</span><span id="hi">--</span></div><div class="row"><span>今日最低</span><span id="lo">--</span></div>
 <div class="row"><span>昨收</span><span id="pc">--</span></div></div>
-<div class="card" style="padding:6px"><div class="muted" id="kinfo">2分钟K线 · EMA<span style="color:#f5c542">10</span>/<span style="color:#4fc3f7">20</span>/<span style="color:#ff8a65">60</span>/<span style="color:#e0e0e0">120</span> · <span style="color:#b388ff">VWAP</span></div><div id="chart" style="height:50vh;position:relative"></div>
+<div class="card" style="padding:6px"><div class="muted" id="kinfo">2分钟K线 · EMA<span style="color:#f5c542">10</span>/<span style="color:#ff8a65">60</span>/<span style="color:#e0e0e0">120</span> · <span style="color:#b388ff">VWAP</span></div><div id="emlg" style="font-size:12px;padding:2px 4px;color:#bbb">EMA EMA7 EMA20 EMA30 EMA70 EMA110 EMA250</div><div id="chart" style="height:50vh;position:relative"><canvas id="emcv" style="position:absolute;left:0;top:0;pointer-events:none;z-index:3"></canvas></div>
 <div class="muted" id="rsil" style="margin-top:2px">RSI(14) <span style="color:#f5c542">--</span></div><div id="rsic" style="height:12vh"></div>
 <div class="muted" id="stl">StochRSI(14,14,3,3) <span style="color:#4fc3f7">K --</span> <span style="color:#ff8a65">D --</span></div><div id="stc" style="height:12vh"></div><div class="muted" id="et"></div></div>
 <div class="card" id="ext"></div><div class="card" id="opt" style="display:none"></div>
 <div class="card"><b>QQQ 信号（新规则）</b><div id="sigs" class="muted">暂无信号</div></div>
 <div class="muted" id="ts"></div>
 <script src="/qqq/static/lwc.js"></script>
+<script>
+/* EMA7 line + EMA20/30 blue cloud + EMA110/250 yellow cloud, all on the 2m bars shown */
+const EMX={P:[7,20,30,70,110,250],C:{7:'#e0e0e0',20:'#2f7bff',30:'#2f7bff',70:'#26c6da',110:'#d4a017',250:'#d4a017'},s:{},v:{},T:[],
+emaA(c,n){const k=2/(n+1),o=[];let e=null;c.forEach((x,i)=>{e=e==null?x:x*k+e*(1-k);o.push(e)});return o},
+init(){[7,20,30,110,250].forEach(n=>this.s[n]=ch.addLineSeries({color:this.C[n],lineWidth:n==7?1:1,lineStyle:0,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false}));
+ ch.timeScale().subscribeVisibleLogicalRangeChange(()=>this.draw());new ResizeObserver(()=>this.draw()).observe($('chart'));
+ ch.subscribeCrosshairMove(p=>this.leg(p&&p.time?this.T.indexOf(p.time):-1))},
+set(bars,T){const c=bars.map(b=>b.c);this.T=bars.map(T);this.P.forEach(n=>this.v[n]=this.emaA(c,n));
+ [7,20,30,110,250].forEach(n=>this.s[n].setData(this.T.map((t,i)=>({time:t,value:this.v[n][i]}))));this.leg(-1);requestAnimationFrame(()=>this.draw())},
+leg(i){if(!this.T.length)return;if(i<0)i=this.T.length-1;$('emlg').innerHTML='EMA '+this.P.map(n=>`<span style="color:${this.C[n]}">EMA${n} ${this.v[n][i].toFixed(2)}</span>`).join(' ')},
+draw(){const cv=$('emcv'),el=$('chart');if(!cv||!ch)return;const w=el.clientWidth,h=el.clientHeight,dp=window.devicePixelRatio||1;cv.width=w*dp;cv.height=h*dp;cv.style.width=w+'px';cv.style.height=h+'px';
+ const g=cv.getContext('2d');g.setTransform(dp,0,0,dp,0,0);g.clearRect(0,0,w,h);if(!this.T.length)return;
+ const pw=w-ch.priceScale('right').width();g.save();g.beginPath();g.rect(0,0,pw,h);g.clip();g.lineWidth=1;
+ const band=(a,b,col)=>{g.strokeStyle=col;let lastX=-9;g.beginPath();for(let i=0;i<this.T.length;i++){const x=ch.timeScale().timeToCoordinate(this.T[i]);if(x==null||x<0||x>pw)continue;
+  const nx=i+1<this.T.length?ch.timeScale().timeToCoordinate(this.T[i+1]):null,sp=nx!=null?nx-x:3;
+  for(let dx=0;dx<Math.max(sp,1);dx+=3){const X=x+dx;if(X-lastX<3)continue;const f=sp>0?dx/sp:0,j=Math.min(i+1,this.T.length-1);
+   const va=this.v[a][i]+(this.v[a][j]-this.v[a][i])*f,vb=this.v[b][i]+(this.v[b][j]-this.v[b][i])*f;
+   const y1=cs.priceToCoordinate(va),y2=cs.priceToCoordinate(vb);if(y1==null||y2==null)continue;g.moveTo(X+.5,y1);g.lineTo(X+.5,y2);lastX=X}}g.stroke()};
+ band(20,30,'rgba(47,123,255,.45)');band(110,250,'rgba(230,180,20,.45)');g.restore()}};
+</script>
+
 <script>
 let ctx=null,lastKey=null;const $=i=>document.getElementById(i);
 $('snd').onclick=()=>{ctx=new (window.AudioContext||window.webkitAudioContext)();ctx.resume();beep();$('snd').textContent='🔊 声音已开启'};
@@ -39,8 +60,8 @@ let ch,cs,vs,em={},vw,hiL,loL,curAlerts=[],kd=null;
 function initChart(){const el=$('chart');ch=LightweightCharts.createChart(el,{autoSize:true,layout:{background:{color:'#1a1f2b'},textColor:'#bbb'},grid:{vertLines:{color:'#262c3a'},horzLines:{color:'#262c3a'}},timeScale:{timeVisible:true,secondsVisible:false,rightOffset:3},rightPriceScale:{scaleMargins:{top:.05,bottom:.25}},crosshair:{mode:0}});
 cs=ch.addCandlestickSeries({upColor:'#26c281',downColor:'#ff4d4f',borderVisible:false,wickUpColor:'#26c281',wickDownColor:'#ff4d4f'});
 vs=ch.addHistogramSeries({priceFormat:{type:'volume'},priceScaleId:'vol',lastValueVisible:false,priceLineVisible:false});ch.priceScale('vol').applyOptions({scaleMargins:{top:.8,bottom:0}});
-[[10,'#f5c542'],[20,'#4fc3f7'],[60,'#ff8a65'],[120,'#e0e0e0']].forEach(([n,c])=>em[n]=ch.addLineSeries({color:c,lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false}));
-vw=ch.addLineSeries({color:'#b388ff',lineWidth:2,priceLineVisible:false,lastValueVisible:false});
+[[10,'#f5c542'],[60,'#ff8a65'],[120,'#e0e0e0']].forEach(([n,c])=>em[n]=ch.addLineSeries({color:c,lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false}));
+EMX.init();vw=ch.addLineSeries({color:'#b388ff',lineWidth:2,priceLineVisible:false,lastValueVisible:false});
 ch.subscribeCrosshairMove(p=>{if(!p.time)return;const t=new Date((p.time-OFF)*1000);$('et').textContent='美东 '+t.toLocaleTimeString('en-US',{timeZone:'America/New_York',hour12:false})+' ET · 北京 '+t.toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false})})}
 let rc,rs,sc,sk,sd;
 function sub(id){const c=LightweightCharts.createChart($(id),{autoSize:true,layout:{background:{color:'#1a1f2b'},textColor:'#bbb'},grid:{vertLines:{color:'#262c3a'},horzLines:{color:'#262c3a'}},timeScale:{visible:false,rightOffset:3},rightPriceScale:{minimumWidth:60},crosshair:{mode:0},handleScroll:false,handleScale:false});return c}
@@ -69,7 +90,7 @@ return{time:Math.min(t,t1),position:b?'belowBar':'aboveBar',color:s.replay?(b?'#
 async function loadK(){try{const d=await (await fetch(BASE+'/kline',{cache:'no-store',headers:{'ngrok-skip-browser-warning':'1'}})).json();if(!d.bars||!d.bars.length){$('kinfo').textContent='K线错误: '+d.error;return}kd=d;
 const T=b=>b.t+OFF;cs.setData(d.bars.map(b=>({time:T(b),open:b.o,high:b.h,low:b.l,close:b.c})));
 vs.setData(d.bars.map(b=>({time:T(b),value:b.v,color:b.c>=b.o?'rgba(38,194,129,.5)':'rgba(255,77,79,.5)'})));
-[10,20,60,120].forEach(n=>em[n].setData(d.bars.map((b,i)=>({time:T(b),value:d['ema'+n][i]}))));vw.setData(d.bars.map((b,i)=>({time:T(b),value:d.vwap[i]})));
+EMX.set(d.bars,T);[10,60,120].forEach(n=>em[n].setData(d.bars.map((b,i)=>({time:T(b),value:d['ema'+n][i]}))));vw.setData(d.bars.map((b,i)=>({time:T(b),value:d.vwap[i]})));
 if(hiL)cs.removePriceLine(hiL);if(loL)cs.removePriceLine(loL);
 hiL=cs.createPriceLine({price:d.day_high,color:'#26c281',lineStyle:2,lineWidth:1,axisLabelVisible:true,title:'最高价 - '+(+d.day_high).toFixed(2)});loL=cs.createPriceLine({price:d.day_low,color:'#ff4d4f',lineStyle:2,lineWidth:1,axisLabelVisible:true,title:'最低价 - '+(+d.day_low).toFixed(2)});
 updSub(d);setMarkers();if(!window._fit){window._fit=1;ch.timeScale().applyOptions({minBarSpacing:0.3});const n=d.bars.length;const fit=()=>{const w=$("chart").clientWidth-65;ch.timeScale().applyOptions({barSpacing:Math.max(0.3,w/(n+4))});ch.timeScale().scrollToRealTime()};fit();setTimeout(fit,500)}if(!$("et").textContent)$('et').textContent='交易日(美东) '+d.session_date_et+' · 时间轴为北京时间'+(DEMO?' · DEMO 演示信号':'')}catch(e){$('kinfo').textContent='K线加载失败 '+e}}
