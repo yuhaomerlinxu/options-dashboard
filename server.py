@@ -1,6 +1,7 @@
 import json, threading, time, datetime, os, re, queue
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from mcp_client import MCP
+import wsfeed
 from providers import McpProvider, LongbridgeProvider
 import sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "qqq")); import qqqapp
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -91,6 +92,9 @@ def push(m, live=False):
         if live and ts > START - 300:
             for q in list(subs): q.put(item)
     return True
+def ws_push(m):
+    if m.get("channel_id") in CH: push(m, True)
+ws = wsfeed.Feed(ws_push)
 def ingest(r, live):
     n = 0
     for m in (r or {}).get("messages", []):
@@ -179,7 +183,7 @@ class H(qqqapp.Mixin, SimpleHTTPRequestHandler):
         if p == "/api/messages":
             with lock: return s.j(msgs[:200])
         if p == "/api/channels": return s.j(CH)
-        if p == "/api/status": return s.j({**status, "now_bj": now_bj(), "session": bool(mcp.sid), "options_channels": len(CH), "messages_cached": len(msgs), "chain_entitlement": prov.last_error})
+        if p == "/api/status": return s.j({**status, "now_bj": now_bj(), "session": bool(mcp.sid), "options_channels": len(CH), "messages_cached": len(msgs), "chain_entitlement": prov.last_error, **ws.state})
         if p == "/api/stream":
             s.send_response(200); s.send_header("Content-Type", "text/event-stream"); s.send_header("Cache-Control", "no-cache, no-transform"); s.send_header("X-Accel-Buffering", "no"); s.end_headers(); s.wfile.write(b": open\n\n"); s.wfile.flush()
             q = queue.Queue(); subs.append(q)
@@ -195,5 +199,6 @@ class H(qqqapp.Mixin, SimpleHTTPRequestHandler):
     def log_message(s, *a): pass
 if __name__ == "__main__":
     for f in (feed_loop, market_loop): threading.Thread(target=f, daemon=True).start()
+    ws.start()
     qqqapp.start()
     ThreadingHTTPServer(("0.0.0.0", int(os.environ.get("PORT", "8080"))), H).serve_forever()

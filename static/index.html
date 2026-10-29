@@ -87,7 +87,7 @@ async function boot(){const ch=await (await fetch('/api/channels')).json();$('ch
  const es=new EventSource('/api/stream');es.addEventListener('msg',e=>{const m=JSON.parse(e.data);$('feed').insertAdjacentHTML('afterbegin',card(m,1));applyF();beep();document.title='🔔 '+(m.trader||m.channel)});
  es.onerror=()=>$('conn').textContent='SSE 重连中…';
  stat();quotesR();setInterval(stat,5000);setInterval(quotesR,15000);}
-async function stat(){const s=await (await fetch('/api/status')).json();$('conn').innerHTML=s.mcp=='connected'?'<span class="up">● 已连接</span>':'<span class="dn">● '+s.mcp+'</span>';
+async function stat(){const s=await (await fetch('/api/status')).json();$('conn').innerHTML=s.mcp=='connected'?'<span class="up">● 已连接</span>':'<span class="dn">● '+s.mcp+'</span>';$('conn').innerHTML+=s.ws=='connected'?' · <span class="up">WS 已连接</span>':(s.ws&&s.ws!='disabled'?' · <span class="dn">WS '+s.ws+'</span>':'');
  $('lu').textContent=s.last_update||'-';$('errs').textContent=Object.values(s.errors).join(' | ').slice(0,300)}
 async function quotesR(){const q=await (await fetch('/api/quotes')).json();$('quotes').innerHTML=T.map(t=>{const d=q[t];if(!d)return `<div class="card q">${t} 加载中</div>`;const c=d.change>=0;
  return `<div class="card q" onclick="sel('${t}')" style="cursor:pointer">${t} <b>${f(d.price)}</b> <span class="${c?'up':'dn'}">${c?'+':''}${f(d.change_pct)}%</span>${d.ext_session?` <small>${d.ext_session.replace('_market','')} ${f(d.ext_price)}</small>`:''}<br><small>交易日 ${d.latest_day} · 取于 ${d.fetched_bj.slice(11)} 北京</small></div>`}).join('');
