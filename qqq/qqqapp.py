@@ -30,8 +30,18 @@ def quote():
             _n=datetime.now(__import__('zoneinfo').ZoneInfo('America/New_York'));_reg=_n.weekday()<5 and (9*60+30)<=_n.hour*60+_n.minute<16*60
             if best and not _reg:
                 nm={'pre_market':'盘前','post_market':'盘后','overnight':'夜盘'}[best[0]]
-                lp=float(best[1]['last']);pc=float(d['prev_close']) if best[0]=='pre_market' else float(d['last'])
-                d['session_label']=nm+' 实时';d['last']=best[1]['last'];d['change_value']='%+.3f'%(lp-pc);d['change_percentage']='%+.2f'%((lp/pc-1)*100)
+                x=best[1];lp=float(x['last']);reg_last=d['last']
+                # Longbridge keeps top-level last=last regular close and prev_close=prior day
+                # until the next regular session. Extended-hours change must use last regular
+                # close (session prev_close or d['last']), not d['prev_close'] (one day too old).
+                try:pc=float(x['prev_close']) if x.get('prev_close') not in (None,'') else float(reg_last)
+                except (TypeError,ValueError):pc=float(reg_last)
+                d['session_label']=nm+' 实时';d['last']=x['last']
+                d['prev_close']=x.get('prev_close') or reg_last
+                if x.get('high') is not None:d['high']=x['high']
+                if x.get('low') is not None:d['low']=x['low']
+                d['change_value']='%+.3f'%(lp-pc)
+                if pc:d['change_percentage']='%+.2f'%((lp/pc-1)*100)
             cache['d'],cache['err']=d,None
         except Exception as e:cache['err']=str(e)
         cache['t']=time.time();return cache['d'],cache['err']
@@ -96,6 +106,12 @@ def kline():
         if not bars:bars=sess
         for b in bars:b['ts']=int(datetime.fromisoformat(b['time'].replace('Z','+00:00')).timestamp())
         bars=[b for b in bars if not(float(b['volume'])==0 and float(b['high'])==float(b['low']))]
+        now_et=datetime.now(ET)
+        _reg=now_et.weekday()<5 and (9*60+30)<=now_et.hour*60+now_et.minute<16*60
+        if not _reg:
+            today_all=[b for b in bars if datetime.fromtimestamp(b['ts'],ET).date()==now_et.date()]
+            if today_all:
+                day=now_et.date();sess=today_all
         c=[float(b['close']) for b in bars];out={}
         for n in(10,20,60,120):out['ema%d'%n]=ema(c,n)
         pv=vv=0;vw=[]
@@ -116,13 +132,13 @@ def kline():
             import importlib.util as U;sp=U.spec_from_file_location('v3live',os.path.join(D,'v3','live.py'));V=U.module_from_spec(sp);sp.loader.exec_module(V)
             d['mtf_signals']=V.compute(d['bars'])
         except Exception as e:print('v3 signals failed:',repr(e),flush=True)
-        # chart shows 2-minute bars (signals above stay on 1m); EMAs/VWAP recomputed on 2m
+        # chart shows 3-minute bars (signals above stay on 1m); EMAs/VWAP recomputed on 3m
         b2=[]
         for b in d['bars']:
-            t=b['t']-b['t']%120
+            t=b['t']-b['t']%180
             if b2 and b2[-1]['t']==t:x=b2[-1];x['h']=max(x['h'],b['h']);x['l']=min(x['l'],b['l']);x['c']=b['c'];x['v']+=b['v']
             else:b2.append(dict(b,t=t))
-        d['bars']=b2;d['period']='2m';c2=[b['c'] for b in b2]
+        d['bars']=b2;d['period']='3m';c2=[b['c'] for b in b2]
         for n in(10,20,60,120):d['ema%d'%n]=ema(c2,n)
         pv=vv=0;vw=[]
         for b in b2:

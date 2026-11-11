@@ -135,7 +135,17 @@ def last(sym):
     for k in('pre_market','post_market','overnight'):
         v=q.get(k)
         if v and v.get('timestamp') and (ext is None or v['timestamp']>ext[1]['timestamp']):ext=(k,v)
-    return {'symbol':s,'last':q['last'],'chg':q.get('change_percentage'),'ext':{'k':ext[0],'last':ext[1]['last'],'ts':ext[1]['timestamp']} if ext else None,'ts':q.get('timestamp')}
+    out={'symbol':s,'last':q['last'],'chg':q.get('change_percentage'),'ext':{'k':ext[0],'last':ext[1]['last'],'ts':ext[1]['timestamp']} if ext else None,'ts':q.get('timestamp')}
+    now=datetime.now(ET)
+    reg=now.weekday()<5 and (9*60+30)<=now.hour*60+now.minute<16*60
+    if ext and not reg:
+        # Surface live extended-hours price as the headline (chart already shows ext bars)
+        lp=float(ext[1]['last'])
+        try:pc=float(ext[1]['prev_close']) if ext[1].get('prev_close') not in (None,'') else float(q['last'])
+        except (TypeError,ValueError):pc=float(q['last'])
+        out['last']=ext[1]['last']
+        if pc:out['chg']='%+.2f'%((lp/pc-1)*100)
+    return out
 
 _pend=set()
 def candles(sym,period):
