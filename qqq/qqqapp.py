@@ -187,12 +187,14 @@ def kline():
         now_et=datetime.now(ET)
         try:
             if time.time()-OLD['t']>120 or not OLD['b']:
-                sd=str(day-__import__('datetime').timedelta(days=2))
-                ed=str(max(day,now_et.date())+__import__('datetime').timedelta(days=1))
+                # Pin history to the last regular-session date (end=next midnight).
+                # A window ending "now" is capped at ~1000 bars and drops 04:00-09:35.
+                sd=str(day);ed=str(day+__import__('datetime').timedelta(days=1))
                 r3=subprocess.run([os.environ['LBSAFE'],'kline','history','QQQ.US','--period','1m','--start',sd,'--end',ed,'--session','all','--format','json'],capture_output=True,text=True,timeout=40)
                 v=json.loads(r3.stdout) if r3.stdout else []
                 if not isinstance(v,list):
                     print('kline history unexpected:', (r3.stderr or '')[:300], flush=True);v=[]
+                print('kline history',sd,ed,'n',len(v), flush=True)
                 OLD['b']=v;OLD['t']=time.time()
             m={x['time']:x for x in OLD['b']};m.update({x['time']:x for x in bars});bars=[m[k] for k in sorted(m)]
         except Exception as e:
