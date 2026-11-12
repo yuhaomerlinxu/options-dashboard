@@ -79,7 +79,95 @@ def ema(v,n):
     for x in v:e=x if e is None else x*k+e*(1-k);o.append(round(e,4))
     return o
 OLD={'t':0,'b':[]}
-DCL={'t':0,'m':{}}
+DCL={'t':0,'rows':[]}
+
+def _bar_date(s, ET):
+    s=str(s)
+    if len(s)>=10 and s[4]=='-' and 'T' not in s[:11] and ' ' not in s[:11]:
+        return __import__('datetime').date.fromisoformat(s[:10])
+    return datetime.fromisoformat(s.replace('Z','+00:00')).astimezone(ET).date()
+
+def load_daily(ET):
+    if time.time()-DCL['t']<=600 and DCL.get('rows'):
+        return DCL['rows']
+    try:
+        rd=subprocess.run([os.environ['LBSAFE'],'kline','QQQ.US','--period','day','--count','20','--format','json'],capture_output=True,text=True,timeout=15)
+        rows=[]
+        for x in json.loads(rd.stdout):
+            rows.append({'d':_bar_date(x['time'],ET),'o':float(x['open']),'h':float(x['high']),'l':float(x['low']),'c':float(x['close'])})
+        DCL['rows']=rows;DCL['t']=time.time()
+    except Exception as e:
+        print('daily kline failed:',e,flush=True)
+    return DCL.get('rows') or []
+
+def key_levels(bars, daily, now_et, last_rth):
+    """Prem / Prev / Open 5min / Prev Week levels for the anchor session (ET)."""
+    ET=now_et.tzinfo
+    hm=now_et.hour*60+now_et.minute
+    if now_et.weekday()<5 and hm>=4*60:
+        anchor=now_et.date()
+    else:
+        anchor=last_rth
+    if not anchor:
+        return {'anchor_date':None}
+    def hm_of(b):
+        dt=datetime.fromtimestamp(b['ts'],ET);return dt.date(),dt.hour*60+dt.minute
+    def rth_days():
+        days=sorted({r['d'] for r in daily})
+        for b in bars:
+            d,m=hm_of(b)
+            if 9*60+30<=m<16*60:days.append(d)
+        return sorted(set(days))
+    days=rth_days()
+    prev=None
+    for d in days:
+        if d<anchor:prev=d
+    out={'anchor_date':str(anchor)}
+    prem=[b for b in bars if hm_of(b)[0]==anchor and 4*60<=hm_of(b)[1]<9*60+30]
+    if prem:
+        out['prem_high']=max(float(b['high']) for b in prem)
+        out['prem_low']=min(float(b['low']) for b in prem)
+    if prev is not None:
+        row=next((r for r in daily if r['d']==prev),None)
+        if row:
+            out['prev_high']=row['h'];out['prev_low']=row['l']
+        else:
+            pb=[b for b in bars if hm_of(b)[0]==prev and 9*60+30<=hm_of(b)[1]<16*60]
+            if pb:
+                out['prev_high']=max(float(b['high']) for b in pb)
+                out['prev_low']=min(float(b['low']) for b in pb)
+    o5=[b for b in bars if hm_of(b)[0]==anchor and 9*60+30<=hm_of(b)[1]<=9*60+34]
+    have34=any(hm_of(b)[1]==9*60+34 for b in o5)
+    closed=anchor<now_et.date() or hm>=9*60+35 or (last_rth and last_rth>anchor)
+    if o5 and (have34 or closed):
+        out['open5_high']=max(float(b['high']) for b in o5)
+        out['open5_low']=min(float(b['low']) for b in o5)
+    mon=anchor-__import__('datetime').timedelta(days=anchor.weekday())
+    w0,w1=mon-__import__('datetime').timedelta(days=7),mon-__import__('datetime').timedelta(days=3)
+    week=[r for r in daily if w0<=r['d']<=w1]
+    if week:
+        out['prev_week_high']=max(r['h'] for r in week)
+        out['prev_week_low']=min(r['l'] for r in week)
+        out['prev_week_range']=[str(w0),str(w1)]
+    return out
+
+def vwap_1m(bars, ET):
+    pv=vv=0;out=[]
+    for b in bars:
+        dt=datetime.fromtimestamp(b['ts'],ET)
+        hm=dt.hour*60+dt.minute
+        typ=(float(b['high'])+float(b['low'])+float(b['close']))/3*float(b['volume'])
+        if dt.hour==9 and dt.minute==30:
+            pv=vv=0
+        if 9*60+30<=hm<16*60:
+            pv+=typ;vv+=float(b['volume'])
+            out.append(round(pv/vv,4) if vv else None)
+        elif hm>=16*60 and vv:
+            out.append(round(pv/vv,4))
+        else:
+            out.append(None)
+    return out
+
 def kline():
     with lock:
         if time.time()-kc['t']<3 and kc['d']:return kc['d']
@@ -98,7 +186,7 @@ def kline():
         sess=[b for b in raw if datetime.fromtimestamp(b['ts'],ET).date()==day]
         try:
             if time.time()-OLD['t']>120 or not OLD['b']:
-                sd=str(datetime.fromtimestamp(raw[-1]['ts'],ET).date()-__import__('datetime').timedelta(days=1 if datetime.now(ET).weekday()!=0 else 3))
+                sd=str(day-__import__('datetime').timedelta(days=5))
                 r3=subprocess.run([os.environ['LBSAFE'],'kline','history','QQQ.US','--period','1m','--start',sd,'--end',str(day),'--session','all','--format','json'],capture_output=True,text=True,timeout=25)
                 OLD['b']=json.loads(r3.stdout);OLD['t']=time.time()
             m={x['time']:x for x in OLD['b']};m.update({x['time']:x for x in bars});bars=[m[k] for k in sorted(m)]
@@ -107,45 +195,37 @@ def kline():
         for b in bars:b['ts']=int(datetime.fromisoformat(b['time'].replace('Z','+00:00')).timestamp())
         bars=[b for b in bars if not(float(b['volume'])==0 and float(b['high'])==float(b['low']))]
         now_et=datetime.now(ET)
-        _reg=now_et.weekday()<5 and (9*60+30)<=now_et.hour*60+now_et.minute<16*60
-        if not _reg:
-            today_all=[b for b in bars if datetime.fromtimestamp(b['ts'],ET).date()==now_et.date()]
-            if today_all:
-                day=now_et.date();sess=today_all
-        c=[float(b['close']) for b in bars];out={}
-        for n in(10,20,60,120):out['ema%d'%n]=ema(c,n)
-        pv=vv=0;vw=[]
+        last_rth=None
         for b in bars:
-            dt=datetime.fromtimestamp(b['ts'],ET)
-            if dt.hour==9 and dt.minute==30:pv=vv=0
-            h,l,cl,v=float(b['high']),float(b['low']),float(b['close']),float(b['volume'])
-            pv+=(h+l+cl)/3*v;vv+=v;vw.append(round(pv/vv,4) if vv else cl)
-        d={'symbol':'QQQ.US','session_date_et':str(day),'bars':[{'t':b['ts'],'o':float(b['open']),'h':float(b['high']),'l':float(b['low']),'c':float(b['close']),'v':float(b['volume'])} for b in bars],'vwap':vw,**out,
-           'day_high':max(float(b['high']) for b in sess),'day_low':min(float(b['low']) for b in sess),'error':None,'replay_signals':[]}
-        try:
-            if time.time()-DCL['t']>600:
-                rd=subprocess.run([os.environ['LBSAFE'],'kline','QQQ.US','--period','day','--count','10','--format','json'],capture_output=True,text=True,timeout=15)
-                DCL['m']={__import__('datetime').date.fromisoformat(x['time'][:10]):float(x['close']) for x in json.loads(rd.stdout)};DCL['t']=time.time()
-        except Exception as e:print('daily kline failed:',e,flush=True)
+            dt=datetime.fromtimestamp(b['ts'],ET);hm=dt.hour*60+dt.minute
+            if 9*60+30<=hm<16*60:last_rth=dt.date()
+        if last_rth is None:last_rth=day
+        daily=load_daily(ET)
+        lv=key_levels(bars,daily,now_et,last_rth)
+        anchor=__import__('datetime').date.fromisoformat(lv['anchor_date']) if lv.get('anchor_date') else last_rth
+        sess=[b for b in bars if datetime.fromtimestamp(b['ts'],ET).date()==anchor]
+        if not sess:sess=bars[-1:]
+        vw1=vwap_1m(bars,ET)
+        bars1=[{'t':b['ts'],'o':float(b['open']),'h':float(b['high']),'l':float(b['low']),'c':float(b['close']),'v':float(b['volume']),'vwap':vw1[i]} for i,b in enumerate(bars)]
+        d={'symbol':'QQQ.US','session_date_et':str(anchor),'bars':bars1,'error':None,'replay_signals':[],
+           'day_high':max(float(b['high']) for b in sess),'day_low':min(float(b['low']) for b in sess),
+           'levels':lv}
         d['mtf_signals']=[]  # old 2/3/4/5m MTF rule retired 2026-10-28 per user; only the new rule is shown
         try:
             import importlib.util as U;sp=U.spec_from_file_location('v3live',os.path.join(D,'v3','live.py'));V=U.module_from_spec(sp);sp.loader.exec_module(V)
-            d['mtf_signals']=V.compute(d['bars'])
+            d['mtf_signals']=V.compute([{'t':b['t'],'o':b['o'],'h':b['h'],'l':b['l'],'c':b['c'],'v':b['v']} for b in bars1])
         except Exception as e:print('v3 signals failed:',repr(e),flush=True)
-        # chart shows 3-minute bars (signals above stay on 1m); EMAs/VWAP recomputed on 3m
+        # chart shows 3-minute bars (signals above stay on 1m); EMA/VWAP on 3m (VWAP from 1m)
         b2=[]
-        for b in d['bars']:
-            t=b['t']-b['t']%180
-            if b2 and b2[-1]['t']==t:x=b2[-1];x['h']=max(x['h'],b['h']);x['l']=min(x['l'],b['l']);x['c']=b['c'];x['v']+=b['v']
-            else:b2.append(dict(b,t=t))
-        d['bars']=b2;d['period']='3m';c2=[b['c'] for b in b2]
-        for n in(10,20,60,120):d['ema%d'%n]=ema(c2,n)
-        pv=vv=0;vw=[]
-        for b in b2:
-            dt=datetime.fromtimestamp(b['t'],ET)
-            if dt.hour==9 and dt.minute==30:pv=vv=0
-            pv+=(b['h']+b['l']+b['c'])/3*b['v'];vv+=b['v'];vw.append(round(pv/vv,4) if vv else b['c'])
-        d['vwap']=vw
+        for b in bars1:
+            t0=b['t']-b['t']%180
+            if b2 and b2[-1]['t']==t0:
+                x=b2[-1];x['h']=max(x['h'],b['h']);x['l']=min(x['l'],b['l']);x['c']=b['c'];x['v']+=b['v']
+                if b.get('vwap') is not None:x['vwap']=b['vwap']
+            else:
+                b2.append({'t':t0,'o':b['o'],'h':b['h'],'l':b['l'],'c':b['c'],'v':b['v'],'vwap':b.get('vwap')})
+        d['bars']=b2;d['period']='3m'
+        d['vwap']=[b.get('vwap') for b in b2]
         with lock:kc['d'],kc['t']=d,time.time()
         return d
     except Exception as e:
