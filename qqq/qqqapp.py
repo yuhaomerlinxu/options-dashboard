@@ -100,7 +100,7 @@ def load_daily(ET):
         print('daily kline failed:',e,flush=True)
     return DCL.get('rows') or []
 
-def key_levels(bars, daily, now_et, last_rth):
+def key_levels(bars, daily, now_et, last_rth, prem_bars=None):
     """Prem / Prev / Open 5min / Prev Week levels for the anchor session (ET)."""
     ET=now_et.tzinfo
     hm=now_et.hour*60+now_et.minute
@@ -123,10 +123,13 @@ def key_levels(bars, daily, now_et, last_rth):
     for d in days:
         if d<anchor:prev=d
     out={'anchor_date':str(anchor)}
-    prem=[b for b in bars if hm_of(b)[0]==anchor and 4*60<=hm_of(b)[1]<9*60+30]
-    if prem:
-        out['prem_high']=max(float(b['high']) for b in prem)
-        out['prem_low']=min(float(b['low']) for b in prem)
+    def prem_of(src):
+        return [b for b in src if hm_of(b)[0]==anchor and 4*60<=hm_of(b)[1]<9*60+30]
+    # Union 1m (capped ~07:20+) with 5m history (full 04:00-09:30).
+    chunks=prem_of(bars)+prem_of(prem_bars or [])
+    if chunks:
+        out['prem_high']=max(float(b['high']) for b in chunks)
+        out['prem_low']=min(float(b['low']) for b in chunks)
     if prev is not None:
         row=next((r for r in daily if r['d']==prev),None)
         if row:
@@ -187,15 +190,23 @@ def kline():
         now_et=datetime.now(ET)
         try:
             if time.time()-OLD['t']>120 or not OLD['b']:
-                # Pin history to the last regular-session date (end=next midnight).
-                # A window ending "now" is capped at ~1000 bars and drops 04:00-09:35.
-                sd=str(day);ed=str(day+__import__('datetime').timedelta(days=1))
-                r3=subprocess.run([os.environ['LBSAFE'],'kline','history','QQQ.US','--period','1m','--start',sd,'--end',ed,'--session','all','--format','json'],capture_output=True,text=True,timeout=40)
-                v=json.loads(r3.stdout) if r3.stdout else []
-                if not isinstance(v,list):
-                    print('kline history unexpected:', (r3.stderr or '')[:300], flush=True);v=[]
-                print('kline history',sd,ed,'n',len(v), flush=True)
-                OLD['b']=v;OLD['t']=time.time()
+                # Same-day range only: end=day+1 slides the 1000-bar cap off the morning.
+                sd=str(day)
+                def _hist(period):
+                    r=subprocess.run([os.environ['LBSAFE'],'kline','history','QQQ.US','--period',period,'--start',sd,'--end',sd,'--session','all','--format','json'],capture_output=True,text=True,timeout=40)
+                    v=json.loads(r.stdout) if r.stdout else []
+                    if not isinstance(v,list):
+                        print('kline history unexpected',period, (r.stderr or '')[:300], flush=True);return []
+                    print('kline history',period,sd,'n',len(v), flush=True)
+                    return v
+                OLD['b']=_hist('1m')
+                b5=[]
+                for x in _hist('5m'):
+                    try:
+                        ts=int(datetime.fromisoformat(x['time'].replace('Z','+00:00')).timestamp())
+                        b5.append({'ts':ts,'high':x['high'],'low':x['low'],'time':x['time']})
+                    except Exception:pass
+                OLD['b5']=b5;OLD['t']=time.time()
             m={x['time']:x for x in OLD['b']};m.update({x['time']:x for x in bars});bars=[m[k] for k in sorted(m)]
         except Exception as e:
             print('kline history failed:',repr(e),flush=True)
@@ -208,7 +219,7 @@ def kline():
             if 9*60+30<=hm<16*60:last_rth=dt.date()
         if last_rth is None:last_rth=day
         daily=load_daily(ET)
-        lv=key_levels(bars,daily,now_et,last_rth)
+        lv=key_levels(bars,daily,now_et,last_rth,prem_bars=OLD.get('b5') or [])
         anchor=__import__('datetime').date.fromisoformat(lv['anchor_date']) if lv.get('anchor_date') else last_rth
         sess=[b for b in bars if datetime.fromtimestamp(b['ts'],ET).date()==anchor]
         if not sess:sess=bars[-1:]
