@@ -148,7 +148,7 @@ def kline():
         d['vwap']=vw
         try:
             import trade_overlay as TO
-            d['trade_overlay']=TO.build(d['bars'], d['mtf_signals'], d.get('ema20') or [])
+            d['trade_overlay']=TO.build(d['bars'], d['mtf_signals'], d.get('ema20') or [], d.get('vwap') or [])
         except Exception as e:
             print('trade overlay failed:',repr(e),flush=True)
             d['trade_overlay']={'segments':[],'markers':[]}

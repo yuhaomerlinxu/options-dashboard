@@ -48,7 +48,10 @@ ch.subscribeCrosshairMove(p=>{leg(p&&p.time);if(!p.time)return;const t=new Date(
 
 function leg(t){if(!kd||!kd.bars.length)return;let i=kd.bars.length-1;if(t){const u=t-OFF;i=kd.bars.reduce((b,x,j)=>Math.abs(x.t-u)<Math.abs(kd.bars[b].t-u)?j:b,0)}
 const e=kd.ema20&&kd.ema20[i],v=kd.vwap&&kd.vwap[i];
-$('emlg').innerHTML=`<span style="color:#4c8dff">EMA20 ${e==null?'--':(+e).toFixed(2)}</span> · <span style="color:#e89ad0">VWAP ${v==null?'--':(+v).toFixed(2)}</span>`}
+let extra='';
+if(t&&kd.trade_overlay&&kd.trade_overlay.markers){const hits=kd.trade_overlay.markers.filter(m=>Math.abs(m.t-(t-OFF))<90);
+if(hits.length)extra=' · '+hits.map(m=>m.label+(m.src==='v3'?'（信号）':m.src==='trend'?'（趋势）':'')).join(' ')}
+$('emlg').innerHTML=`<span style="color:#4c8dff">EMA20 ${e==null?'--':(+e).toFixed(2)}</span> · <span style="color:#e89ad0">VWAP ${v==null?'--':(+v).toFixed(2)}</span>`+extra}
 
 function barSp(){if(!kd||kd.bars.length<2||!ch)return 6;const a=ch.timeScale().timeToCoordinate(kd.bars[0].t+OFF),b=ch.timeScale().timeToCoordinate(kd.bars[1].t+OFF);if(a==null||b==null)return ch.timeScale().options().barSpacing||6;return Math.abs(b-a)}
 
@@ -76,9 +79,7 @@ g.save();g.beginPath();g.rect(0,0,pw,h);g.clip();
   g.font='12px -apple-system,"PingFang SC",sans-serif';
   g.fillStyle=lg?'#5ee8dc':'#f48a8a';g.textBaseline='top';g.textAlign='left';
   const label=s.label||(lg?'多头':'空头');
-  const width=xb-xa;
-  const step=Math.max(160,g.measureText(label).width+40);
-  for(let x=xa+6;x<xb-20;x+=step){if(x>0&&x<pw-10)g.fillText(label,x,topH+3)}
+  if(xa+6<pw-10)g.fillText(label,xa+6,topH+3);
 });
 const taken=[];
 function bump(x,y){let Y=y;for(let k=0;k<8;k++){const hit=taken.some(p=>Math.abs(p[0]-x)<16&&Math.abs(p[1]-Y)<12);if(!hit)break;Y+=14}taken.push([x,Y]);return Y}
