@@ -146,6 +146,12 @@ def kline():
             if dt.hour==9 and dt.minute==30:pv=vv=0
             pv+=(b['h']+b['l']+b['c'])/3*b['v'];vv+=b['v'];vw.append(round(pv/vv,4) if vv else b['c'])
         d['vwap']=vw
+        try:
+            import trade_overlay as TO
+            d['trade_overlay']=TO.build(d['bars'], d['mtf_signals'], d.get('ema20') or [])
+        except Exception as e:
+            print('trade overlay failed:',repr(e),flush=True)
+            d['trade_overlay']={'segments':[],'markers':[]}
         with lock:kc['d'],kc['t']=d,time.time()
         return d
     except Exception as e:
