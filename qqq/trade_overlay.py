@@ -76,7 +76,7 @@ def _dir_of(sig):
     return 0
 
 
-def _focus(bars, session_date=None):
+def _focus(bars, segments=None, markers=None, session_date=None):
     rth = [b for b in bars if _rth(b['t'])]
     if session_date:
         day = [b for b in rth if str(_et(b['t']).date()) == str(session_date)]
@@ -86,10 +86,23 @@ def _focus(bars, session_date=None):
         return bars[0]['t'], bars[-1]['t']
     if not rth:
         return None, None
-    # last session's RTH if several days are present
     last_day = str(_et(rth[-1]['t']).date())
     day = [b for b in rth if str(_et(b['t']).date()) == last_day]
-    return day[0]['t'], day[-1]['t']
+    start, end = day[0]['t'], day[-1]['t']
+    last_act = None
+    for s in segments or []:
+        last_act = s['t1'] if last_act is None else max(last_act, s['t1'])
+    for m in markers or []:
+        last_act = m['t'] if last_act is None else max(last_act, m['t'])
+    if last_act:
+        noon = int(datetime(_et(start).year, _et(start).month, _et(start).day, 12, 0, tzinfo=ET).timestamp())
+        end = min(end, max(noon, last_act + 60 * 60))
+    now = datetime.now(ET)
+    if _rth(int(now.timestamp())) and str(now.date()) == last_day:
+        cur = int(now.timestamp())
+        cur = cur - cur % 180
+        end = min(day[-1]['t'], max(end, cur))
+    return start, end
 
 
 def build(bars, signals, ema20=None):
@@ -210,7 +223,7 @@ def build(bars, signals, ema20=None):
     if seg:
         segments.append(seg)
 
-    focus_from, focus_to = _focus(bars)
+    focus_from, focus_to = _focus(bars, segments, markers)
     analysis_end = focus_to
     return {
         'segments': segments,
