@@ -80,14 +80,34 @@ function etParts(ts){
     dateKey: fmt({year:'numeric', month:'2-digit', day:'2-digit'})
   };
 }
-function fmtTick(real, prevReal){
-  const a = etParts(real);
-  if(prevReal){
-    const b = etParts(prevReal);
-    if(a.dateKey !== b.dateKey) return a.mon + ' ' + a.day;
+function realIdx(t){
+  if(t && typeof t==='object'){
+    if(typeof t.timestamp==='number') t=t.timestamp;
+    else return -1;
   }
-  // top of hour-ish
-  return a.hour.replace(' ', '');
+  t=Number(t);
+  if(!cmap.length || !isFinite(t)) return -1;
+  const i=cmap.indexOf(t);
+  if(i>=0) return i;
+  let best=0, bd=Infinity;
+  for(let k=0;k<cmap.length;k++){
+    const d=Math.abs(cmap[k]-t);
+    if(d<bd){bd=d;best=k;}
+  }
+  return best;
+}
+function fmtTick(t){
+  const i=realIdx(t);
+  const r=i>=0?real[i]:t;
+  const prev=i>0?real[i-1]:null;
+  const a=etParts(r);
+  if(prev && etParts(prev).dateKey!==a.dateKey) return a.mon+' '+a.day;
+  return a.hour; // "11 AM", "12 PM"
+}
+function fmtCross(t){
+  const i=realIdx(t);
+  const p=etParts(i>=0?real[i]:t);
+  return p.mon+' '+p.day+'  '+p.hm+' ET';
 }
 
 let ch, cs, vw, fl, rc, rs, kd=null, cmap=[], real=[], lines=[];
@@ -97,21 +117,10 @@ function init(){
     layout:{background:{color:'#000'}, textColor:'#7a7a7a', fontSize:11},
     grid:{vertLines:{color:'#141414'}, horzLines:{color:'#141414'}},
     rightPriceScale:{borderVisible:false, scaleMargins:{top:0.06, bottom:0.06}},
-    timeScale:{borderVisible:false, timeVisible:true, secondsVisible:false, rightOffset:4},
+    timeScale:{borderVisible:false, timeVisible:true, secondsVisible:false, rightOffset:4, tickMarkFormatter:fmtTick},
     crosshair:{vertLine:{color:'#333', width:1, style:0, labelBackgroundColor:'#222'}, horzLine:{color:'#333', width:1, style:0, labelBackgroundColor:'#222'}},
   };
-  const loc = {
-    timeFormatter: t => { const r = real[cmap.indexOf(t)] || t; const p=etParts(r); return p.mon+' '+p.day+'  '+p.hm+' ET'; },
-    tickMarkFormatter: (t, typ) => {
-      const i = cmap.indexOf(t);
-      const r = real[i] || t;
-      const prev = i>0 ? real[i-1] : null;
-      const a = etParts(r);
-      if(prev && etParts(prev).dateKey !== a.dateKey) return a.mon+' '+a.day;
-      return a.hour.replace(' ','');
-    }
-  };
-  ch = LightweightCharts.createChart($('chart'), Object.assign({}, common, {localization:loc, rightPriceScale:Object.assign({}, common.rightPriceScale, {scaleMargins:{top:0.04,bottom:0.08}})}));
+  ch = LightweightCharts.createChart($('chart'), Object.assign({}, common, {localization:{timeFormatter:fmtCross, locale:'en-US'}, rightPriceScale:Object.assign({}, common.rightPriceScale, {scaleMargins:{top:0.04,bottom:0.08}})}));
   cs = ch.addCandlestickSeries({
     upColor:'#3d8f7a', downColor:'#c45c5c', borderVisible:false,
     wickUpColor:'#3d8f7a', wickDownColor:'#c45c5c',
