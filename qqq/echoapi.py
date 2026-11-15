@@ -231,16 +231,20 @@ def _gex_raw(under, spot):
             if flip is None or abs(cand - spot) < abs(flip - spot):
                 flip = cand
     # Drift: strike nearest the gamma flip, else largest call-GEX above spot.
+    # Keep it visually distinct from Anchor (at least 0.3% or $2).
+    sep = max(2.0, spot * 0.003)
+    def far(k):
+        return k is not None and abs(k - anchor) >= sep
     drift = None
     if flip is not None:
-        drift = min(net, key=lambda k: abs(k - flip))
-        if drift == anchor:
-            drift = None
+        cand = min(net, key=lambda k: abs(k - flip))
+        if far(cand):
+            drift = cand
     if drift is None:
-        above = [(call_g.get(k, 0), k) for k in call_g if k > spot + 0.01 and k != anchor]
+        above = [(call_g.get(k, 0), k) for k in call_g if k > spot + 0.01 and far(k)]
         drift = max(above)[1] if above else None
     if drift is None:
-        rest = [k for k in net if k != anchor]
+        rest = [k for k in net if far(k)]
         if rest:
             drift = max(rest, key=lambda k: abs(net[k]))
     majors = sorted(net, key=lambda k: -abs(net[k]))
