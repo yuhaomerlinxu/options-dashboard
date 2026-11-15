@@ -160,6 +160,7 @@ def kline():
 LWC=open(os.path.join(D,'static','lwc.js'),'rb').read()
 PAGE=open(os.path.join(D,'index.html'),'rb').read()
 CPAGE=open(os.path.join(D,'chart.html'),'rb').read()
+EPAGE=open(os.path.join(D,'echo.html'),'rb').read()
 class Mixin:
     def send(self,code,body,ct):
         self.send_response(code);self.send_header('Content-Type',ct);self.send_header('Cache-Control','no-store, no-cache, must-revalidate, max-age=0');self.send_header('Pragma','no-cache');self.send_header('Expires','0');self.end_headers();self.wfile.write(body)
@@ -171,6 +172,15 @@ class Mixin:
             except Exception:pass
     def _get(self):
         p=self.path.split('?')[0].rstrip('/')
+        if p=='/echo':self.send(200,EPAGE,'text/html; charset=utf-8');return
+        if p=='/echo/data':
+            sy=parse_qs(urlparse(self.path).query).get('s',['QQQ'])[0]
+            try:
+                import echoapi
+                r=echoapi.payload(sy)
+            except Exception as e:
+                r={'error':str(e)}
+            self.send(200,json.dumps(r,ensure_ascii=False,default=str).encode(),'application/json; charset=utf-8');return
         if p=='/qqq':self.send(200,PAGE,'text/html; charset=utf-8')
         elif p=='/qqq'+'/api':
             d,e=quote()
@@ -200,6 +210,10 @@ def _volwarm():
 def start():
     vollive.start()
     radar.start()  # radar scheduler thread (was radar_run.sh)
+    try:
+        import echoapi; echoapi.prewarm()
+    except Exception as e:
+        print('echo prewarm failed:',repr(e),flush=True)
     threading.Thread(target=chartapi.prewarm,daemon=True).start()
     threading.Thread(target=spread_engine.prewarm,daemon=True).start()
     def mon():  # QQQ 1/2/3m signal monitor (was qqq_rt/run.sh watchdog)

@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QQQ / SPX 5m</title>
+<style>
+html,body{margin:0;background:#000;color:#e8e8e8;font-family:-apple-system,"PingFang SC",system-ui,sans-serif;height:100%;overflow:hidden}
+a{color:#9cf;text-decoration:none}
+#wrap{display:flex;flex-direction:column;height:100%;padding:18px 22px 36px;box-sizing:border-box}
+#hdr{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:8px;flex-shrink:0}
+#left{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+#sym{font-size:32px;font-weight:700;letter-spacing:-0.03em}
+#meta{color:#8a8a8a;font-size:16px}
+#px{font-size:32px;font-weight:650;letter-spacing:-0.03em}
+#chg{font-size:13px;font-weight:600;padding:3px 8px;border-radius:999px;margin-left:6px}
+#chg.dn{background:#3a1216;color:#f07178}#chg.up{background:#10291c;color:#3ecf8e}
+#asof{color:#8a8a8a;font-size:15px;white-space:nowrap}
+#tog{display:flex;gap:6px;margin-left:8px}
+#tog a{padding:3px 10px;border-radius:999px;font-size:13px;border:1px solid #222;color:#aaa}
+#tog a.on{background:#161616;color:#fff;border-color:#333}
+#leg{font-size:12px;color:#8d8d8d;margin:2px 0 6px;flex-shrink:0}
+#leg b{font-weight:600}
+#leg .cloud{color:#8d8d8d}#leg .vw{color:#9a9a9a}#leg .gex{color:#7d7d7d}
+#leg .anc{color:#3ee07a;margin-left:8px}
+#chart{flex:1.7;min-height:280px;position:relative}
+#flow{height:88px;position:relative;flex-shrink:0}
+#rsi{height:100px;position:relative;flex-shrink:0}
+#flab,#rlab{position:absolute;left:8px;top:4px;z-index:4;font-size:12px;color:#8d8d8d;pointer-events:none}
+#flab b{color:#ccc;font-weight:600}
+#note{font-size:11px;color:#555;margin-top:6px;flex-shrink:0}
+.err{color:#f07178;padding:20px}
+#ov,#rov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
+</style>
+</head>
+<body>
+<nav style="position:fixed;bottom:6px;left:8px;z-index:99;font:12px sans-serif;background:#111a;padding:3px 8px;border-radius:6px">
+<a href="/" style="color:#9cf;margin-right:10px">期权看板</a>
+<a href="/qqq" style="color:#9cf;margin-right:10px">QQQ实时</a>
+<a href="/qqq/chart?s=QQQ" style="color:#9cf;margin-right:10px">关键点位</a>
+<a href="/qqq/radar" style="color:#fbbf24;margin-right:10px">期权雷达</a>
+<a href="/echo?s=QQQ" style="color:#fff">QQQ/SPX 5分</a>
+</nav>
+<div id="wrap">
+  <div id="hdr">
+    <div id="left">
+      <span id="sym">—</span>
+      <span id="meta">5m · RTH</span>
+      <span id="px">—</span>
+      <span id="chg" class="dn">—</span>
+      <span id="tog">
+        <a id="tq" href="/echo?s=QQQ">QQQ</a>
+        <a id="ts" href="/echo?s=SPX">SPX</a>
+      </span>
+    </div>
+    <div id="asof">—</div>
+  </div>
+  <div id="leg">BT Cloud · VWAP · GEX levels</div>
+  <div id="chart"><canvas id="ov"></canvas></div>
+  <div id="flow"><div id="flab">Net flow</div></div>
+  <div id="rsi"><canvas id="rov"></canvas><div id="rlab">RSI 14 —</div></div>
+  <div id="note"></div>
+</div>
+<script src="/qqq/static/lwc.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const SYM = (new URLSearchParams(location.search).get('s') || 'QQQ').toUpperCase() === 'SPX' ? 'SPX' : 'QQQ';
+$('tq').className = SYM==='QQQ' ? 'on' : '';
+$('ts').className = SYM==='SPX' ? 'on' : '';
+document.title = SYM + ' 5m · RTH';
+
+function etParts(ts){
+  const d = new Date(ts*1000);
+  const fmt = (opt) => new Intl.DateTimeFormat('en-US', Object.assign({timeZone:'America/New_York'}, opt)).format(d);
+  return {
+    mon: fmt({month:'short'}),
+    day: fmt({day:'numeric'}),
+    hour: fmt({hour:'numeric', hour12:true}),
+    hm: fmt({hour:'numeric', minute:'2-digit', hour12:true}),
+    dateKey: fmt({year:'numeric', month:'2-digit', day:'2-digit'})
+  };
+}
+function fmtTick(real, prevReal){
+  const a = etParts(real);
+  if(prevReal){
+    const b = etParts(prevReal);
+    if(a.dateKey !== b.dateKey) return a.mon + ' ' + a.day;
+  }
+  // top of hour-ish
+  return a.hour.replace(' ', '');
+}
+
+let ch, cs, vw, fl, rc, rs, kd=null, cmap=[], real=[], lines=[];
+function init(){
+  const common = {
+    autoSize:true,
+    layout:{background:{color:'#000'}, textColor:'#7a7a7a', fontSize:11},
+    grid:{vertLines:{color:'#141414'}, horzLines:{color:'#141414'}},
+    rightPriceScale:{borderVisible:false, scaleMargins:{top:0.06, bottom:0.06}},
+    timeScale:{borderVisible:false, timeVisible:true, secondsVisible:false, rightOffset:4},
+    crosshair:{vertLine:{color:'#333', width:1, style:0, labelBackgroundColor:'#222'}, horzLine:{color:'#333', width:1, style:0, labelBackgroundColor:'#222'}},
+  };
+  const loc = {
+    timeFormatter: t => { const r = real[cmap.indexOf(t)] || t; const p=etParts(r); return p.mon+' '+p.day+'  '+p.hm+' ET'; },
+    tickMarkFormatter: (t, typ) => {
+      const i = cmap.indexOf(t);
+      const r = real[i] || t;
+      const prev = i>0 ? real[i-1] : null;
+      const a = etParts(r);
+      if(prev && etParts(prev).dateKey !== a.dateKey) return a.mon+' '+a.day;
+      return a.hour.replace(' ','');
+    }
+  };
+  ch = LightweightCharts.createChart($('chart'), Object.assign({}, common, {localization:loc, rightPriceScale:Object.assign({}, common.rightPriceScale, {scaleMargins:{top:0.04,bottom:0.08}})}));
+  cs = ch.addCandlestickSeries({
+    upColor:'#3d8f7a', downColor:'#c45c5c', borderVisible:false,
+    wickUpColor:'#3d8f7a', wickDownColor:'#c45c5c',
+    lastValueVisible:true, priceLineVisible:false
+  });
+  vw = ch.addLineSeries({color:'#8d8d8d', lineWidth:1, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false});
+  ch.timeScale().subscribeVisibleLogicalRangeChange(()=>drawCloud());
+  new ResizeObserver(()=>drawCloud()).observe($('chart'));
+
+  const sub = (el, margins) => LightweightCharts.createChart(el, Object.assign({}, common, {
+    localization:loc,
+    handleScroll:false, handleScale:false,
+    timeScale:{visible:false, borderVisible:false, rightOffset:4},
+    rightPriceScale:Object.assign({}, common.rightPriceScale, {scaleMargins:margins, minimumWidth:60}),
+    grid:{vertLines:{color:'#141414'}, horzLines:{color:'#1a1a1a'}},
+  }));
+  const fc = sub($('flow'), {top:0.15,bottom:0.15});
+  fl = fc.addHistogramSeries({priceLineVisible:false, lastValueVisible:false});
+  rc = sub($('rsi'), {top:0.1,bottom:0.1});
+  rs = rc.addLineSeries({color:'#d9897a', lineWidth:1, priceLineVisible:false, lastValueVisible:true,
+    autoscaleInfoProvider:()=>({priceRange:{minValue:0,maxValue:100}})});
+  [{p:70,c:'rgba(180,180,180,.45)'},{p:30,c:'rgba(180,180,180,.45)'},{p:50,c:'rgba(80,80,80,.35)'}].forEach(x=>{
+    rs.createPriceLine({price:x.p, color:x.c, lineWidth:1, lineStyle:2, axisLabelVisible:false});
+  });
+  ch.applyOptions({rightPriceScale:{minimumWidth:60}});
+  ch.timeScale().subscribeVisibleLogicalRangeChange(r=>{ if(r){ fc.timeScale().setVisibleLogicalRange(r); rc.timeScale().setVisibleLogicalRange(r);} drawRsiBg(); });
+  new ResizeObserver(()=>drawRsiBg()).observe($('rsi'));
+  window._fc=fc; window._rc=rc;
+}
+
+function drawCloud(){
+  const cv=$('ov'), el=$('chart');
+  if(!cv||!ch||!kd) return;
+  const w=el.clientWidth, h=el.clientHeight, dp=window.devicePixelRatio||1;
+  cv.width=w*dp; cv.height=h*dp; cv.style.width=w+'px'; cv.style.height=h+'px';
+  const g=cv.getContext('2d'); g.setTransform(dp,0,0,dp,0,0); g.clearRect(0,0,w,h);
+  const pw=Math.max(0,w-(ch.priceScale('right').width()||60));
+  const e8=kd.ema8, e21=kd.ema21;
+  if(!e8||!e21) return;
+  const xOf=t=>ch.timeScale().timeToCoordinate(t);
+  const yOf=p=>cs.priceToCoordinate(p);
+  g.save(); g.beginPath(); g.rect(0,0,pw,h); g.clip();
+  for(let i=0;i<cmap.length-1;i++){
+    const x1=xOf(cmap[i]), x2=xOf(cmap[i+1]);
+    const a1=yOf(e8[i]), b1=yOf(e21[i]), a2=yOf(e8[i+1]), b2=yOf(e21[i+1]);
+    if([x1,x2,a1,b1,a2,b2].some(v=>v==null)) continue;
+    const bull=(e8[i]+e8[i+1])>=(e21[i]+e21[i+1]);
+    g.fillStyle=bull?'rgba(45,130,110,0.42)':'rgba(130,45,50,0.42)';
+    g.beginPath(); g.moveTo(x1,a1); g.lineTo(x2,a2); g.lineTo(x2,b2); g.lineTo(x1,b1); g.closePath(); g.fill();
+  }
+  // edge lines
+  const stroke=(arr, up, down)=>{
+    g.lineWidth=1.2;
+    for(let i=1;i<cmap.length;i++){
+      const x1=xOf(cmap[i-1]), x2=xOf(cmap[i]), y1=yOf(arr[i-1]), y2=yOf(arr[i]);
+      if([x1,x2,y1,y2].some(v=>v==null)) continue;
+      const bull=arr[i]>=(arr===e8?e21[i]:e8[i]);
+      g.strokeStyle=bull?up:down;
+      g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.stroke();
+    }
+  };
+  stroke(e8,'#3d9d86','#c45c5c');
+  stroke(e21,'#2e7a68','#8a3a40');
+  g.restore();
+}
+
+function drawRsiBg(){
+  const cv=$('rov'), el=$('rsi');
+  if(!cv||!rc||!kd) return;
+  const w=el.clientWidth, h=el.clientHeight, dp=window.devicePixelRatio||1;
+  cv.width=w*dp; cv.height=h*dp; cv.style.width=w+'px'; cv.style.height=h+'px';
+  const g=cv.getContext('2d'); g.setTransform(dp,0,0,dp,0,0); g.clearRect(0,0,w,h);
+  const pw=Math.max(0,w-(rc.priceScale('right').width()||60));
+  const xOf=t=>rc.timeScale().timeToCoordinate(t);
+  const r=kd.rsi||[];
+  g.save(); g.beginPath(); g.rect(0,0,pw,h); g.clip();
+  let i=0;
+  while(i<r.length){
+    const v=r[i];
+    const kind=v==null?0:(v>=70?1:(v<=30?-1:0));
+    if(!kind){i++;continue;}
+    let j=i;
+    while(j<r.length && r[j]!=null && ((kind===1 && r[j]>=70) || (kind===-1 && r[j]<=30))) j++;
+    const x1=xOf(cmap[i]), x2=xOf(cmap[Math.max(i,j-1)]);
+    if(x1!=null && x2!=null){
+      const x0=x1, x1b=x2 + (cmap[1]&&cmap[0] ? Math.abs((rc.timeScale().timeToCoordinate(cmap[1])||0)-(rc.timeScale().timeToCoordinate(cmap[0])||0)) : 4);
+      g.fillStyle=kind===1?'rgba(40,120,110,0.28)':'rgba(140,50,60,0.28)';
+      g.fillRect(Math.min(x0,x1b),0,Math.abs(x1b-x0),h);
+    }
+    i=Math.max(j,i+1);
+  }
+  g.restore();
+}
+
+function applyGex(g){
+  lines.forEach(l=>cs.removePriceLine(l)); lines=[];
+  const add=(p,c,title,style,w)=>{
+    if(p==null) return;
+    lines.push(cs.createPriceLine({price:+p, color:c, lineWidth:w||1, lineStyle:style, axisLabelVisible:true, title}));
+  };
+  if(!g||!g.ok){
+    const msg=g&&g.pending?' · GEX 加载中…':(g&&g.error?' · GEX 失败':'');
+    $('leg').innerHTML='<span class="cloud">BT Cloud</span>  ·  <span class="vw">VWAP</span>  ·  <span class="gex">GEX levels</span>'+msg;
+    return;
+  }
+  add(g.anchor,'#3ee07a','Anchor',0,2);
+  add(g.drift,'#e8c44d','Drift',2,1);
+  (g.others||[]).forEach(p=>add(p,'#4a4560','',2,1));
+  const anc=g.anchor!=null?(+g.anchor).toFixed(2):'—';
+  $('leg').innerHTML='<span class="cloud">BT Cloud</span>  ·  <span class="vw">VWAP</span>  ·  <span class="gex">GEX levels</span>  <span class="anc">Anchor '+anc+'</span>';
+}
+
+function render(d){
+  kd=d; $('sym').textContent=d.symbol;
+  $('px').textContent=d.last==null?'—':'$'+Number(d.last).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const pct=d.change_pct, up=pct>=0;
+  $('chg').className=up?'up':'dn';
+  $('chg').textContent=(up?'+':'')+Number(pct).toFixed(2)+'%';
+  $('asof').textContent=d.asof_et||'';
+  const lastR=d.rsi && d.rsi.length ? d.rsi[d.rsi.length-1] : null;
+  $('rlab').innerHTML='RSI 14  <span style="color:'+(lastR>=50?'#4db6a0':'#d9897a')+'">'+(lastR==null?'—':lastR.toFixed(1))+'</span>';
+  $('flab').innerHTML='Net flow  <b>'+(d.flow_last_lbl||'—')+'</b> &nbsp; Day  <b>'+(d.flow_day_lbl||'—')+'</b>';
+  const note=[d.flow_note||'', d.gex&&d.gex.source?('GEX: '+d.gex.source+(d.gex.exps?' · 到期 '+(d.gex.exps.join(', ')):'')+(d.gex.asof?' · '+d.gex.asof:'')):'', 'K线: Longbridge 5分钟常规时段（09:30–16:00 ET）· 最近 3 个交易日'].filter(Boolean);
+  $('note').textContent=note.join('  ·  ');
+
+  const T0=d.bars[0].t;
+  cmap=d.bars.map((_,i)=>T0+i*300);
+  real=d.bars.map(b=>b.t);
+  cs.setData(d.bars.map((b,i)=>({time:cmap[i], open:b.o, high:b.h, low:b.l, close:b.c})));
+  vw.setData(d.bars.map((b,i)=>({time:cmap[i], value:d.vwap[i]})));
+  fl.setData(d.bars.map((b,i)=>({time:cmap[i], value:d.flow[i], color:d.flow[i]>=0?'#2f9d7a':'#c45c5c'})));
+  rs.setData(d.bars.map((b,i)=>d.rsi[i]==null?{time:cmap[i]}:{time:cmap[i], value:d.rsi[i]}));
+  // color the RSI line roughly by last regime via options — keep salmon/teal by splitting is hard; leave default, tag is colored
+  applyGex(d.gex);
+  ch.timeScale().fitContent();
+  requestAnimationFrame(()=>{drawCloud();drawRsiBg()});
+}
+
+async function load(){
+  try{
+    const d=await (await fetch('/echo/data?s='+SYM,{cache:'no-store'})).json();
+    if(d.error){ $('note').textContent='加载失败: '+d.error; return d; }
+    render(d);
+    return d;
+  }catch(e){ $('note').textContent='加载失败: '+e; }
+}
+
+if(!window.LightweightCharts){ $('chart').innerHTML='<div class="err">图表库加载失败</div>'; }
+else{
+  init();
+  load().then(d=>{
+    if(d && d.gex && d.gex.pending){
+      const t=setInterval(async()=>{
+        const n=await (await fetch('/echo/data?s='+SYM,{cache:'no-store'})).json();
+        if(n.gex && !n.gex.pending){ applyGex(n.gex); kd=n;
+          const note=[n.flow_note||'', n.gex.source?('GEX: '+n.gex.source+(n.gex.exps?' · 到期 '+n.gex.exps.join(', '):'')+(n.gex.asof?' · '+n.gex.asof:'')):'', 'K线: Longbridge 5分钟常规时段（09:30–16:00 ET）· 最近 3 个交易日'].filter(Boolean);
+          $('note').textContent=note.join('  ·  ');
+          clearInterval(t);
+        }
+      },2000);
+      setTimeout(()=>clearInterval(t),90000);
+    }
+  });
+  const poll=()=>setInterval(()=>{ if(!window._ld){ window._ld=1; Promise.resolve(load()).finally(()=>window._ld=0);} }, 15000);
+  poll();
+}
+</script>
+</body>
+</html>
