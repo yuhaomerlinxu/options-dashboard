@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>蝶式机会雷达</title>
+<style>
+:root{--bg:#070b14;--card:#101826;--line:#1c2a3d;--txt:#d7e0ee;--mut:#7d8b9d;--cyan:#5eead4;--green:#34d399;--red:#fb7185;}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"PingFang SC","Noto Sans SC",system-ui,sans-serif}
+a{color:#9cd5ff;text-decoration:none}
+#wrap{max-width:1180px;margin:0 auto;padding:12px 14px 70px}
+header.hero{text-align:center;padding:8px 0 10px}
+header.hero h1{margin:0;font-size:28px;font-weight:750;letter-spacing:.08em;background:linear-gradient(180deg,#ecfeff,#5eead4 55%,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 10px rgba(94,234,212,.35))}
+#clocks{display:inline-flex;gap:16px;margin-top:8px;padding:6px 16px;border:1px solid var(--line);border-radius:10px;color:var(--mut);font-size:13px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:12px 0}
+.bar select,.bar button{background:#0a121c;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px}
+.bar button.p{background:#1d4ed8;border-color:#1d4ed8;cursor:pointer}
+.bar button#rf{background:#1d4ed8;border:0;cursor:pointer}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+@media(max-width:900px){.stats{grid-template-columns:1fr 1fr 1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.card h3{margin:0 0 4px;font-size:11px;color:var(--mut)}
+.card .v{font-size:20px;font-weight:700}
+.card .s{font-size:11px;color:var(--mut);margin-top:3px;line-height:1.4}
+.sec h2{margin:4px 0 10px;font-size:20px;color:#7dd3fc}
+.dec{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:800px){.dec{grid-template-columns:1fr}}
+.rng{margin:6px 0}
+.rng .lab{font-size:12px;color:var(--mut);width:110px;display:inline-block}
+.track{display:inline-block;height:12px;background:#1a2430;border-radius:6px;width:calc(100% - 220px);position:relative;vertical-align:middle}
+.track i{position:absolute;top:0;height:100%;border-radius:6px;background:#5eead4;opacity:.85}
+.track b{position:absolute;top:-3px;width:2px;height:18px;background:#fff}
+.badge{font-size:11px;padding:2px 8px;border-radius:8px;background:#3f1d2a;color:#fb7185}
+.badge.ok{background:#11332a;color:#34d399}
+.gridwrap{display:grid;grid-template-columns:1.15fr 1fr;gap:10px}
+@media(max-width:900px){.gridwrap{grid-template-columns:1fr}}
+table.fly{width:100%;border-collapse:separate;border-spacing:4px;font-size:12px}
+table.fly th{color:var(--mut);font-weight:500;padding:4px}
+table.fly td{text-align:center;background:#13202e;border-radius:8px;padding:6px 2px;cursor:pointer;color:#cbd5e1}
+table.fly td.empty{background:transparent;color:#334155;cursor:default}
+table.fly td.on{outline:2px solid #38bdf8}
+table.fly .cp{display:block;color:#64748b;font-size:10px}
+#pnl{width:100%;height:280px}
+.pnlstats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.up{color:#34d399}.dn{color:#fb7185}
+.note{font-size:11px;color:#667787;margin-top:8px;line-height:1.45}
+.legs{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.legs div{background:#0d1520;border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+nav.bot{position:fixed;bottom:6px;left:8px;z-index:99;font:12px sans-serif;background:#111a;padding:3px 8px;border-radius:6px}
+.info{cursor:help;color:#22d3ee;font-size:11px}
+#load{color:var(--mut);text-align:center;padding:24px}
+.amber{color:#fbbf24}
+</style>
+</head>
+<body>
+<nav class="bot">
+<a href="/" style="color:#9cf;margin-right:10px">期权看板</a>
+<a href="/qqq" style="color:#9cf;margin-right:10px">QQQ实时</a>
+<a href="/strategy?symbol=QQQ" style="color:#9cf;margin-right:10px">策略雷达</a>
+<a href="/strategy/fly?symbol=SPX" style="color:#fff">蝶式雷达</a>
+</nav>
+<div id="wrap">
+  <header class="hero">
+    <h1>美股期权策略雷达</h1>
+    <div id="clocks"><span id="bj">北京：—</span><span id="et">美东：—</span></div>
+  </header>
+  <div class="bar">
+    <button class="p" id="latest">最新</button>
+    <select id="sym"><option>SPX</option><option>SPY</option><option>QQQ</option></select>
+    <select id="exp"></select>
+    <span class="s" id="meta" style="color:#7d8b9d;font-size:12px"></span>
+    <span style="margin-left:auto"></span>
+    <select id="typ"><option value="auto">Call / Put 择优</option><option value="C">仅 Call</option><option value="P">仅 Put</option></select>
+    <button id="rf">刷新</button>
+  </div>
+  <div id="load">正在加载期权链，第一次大约 20–40 秒…</div>
+  <div id="app" style="display:none">
+    <div class="stats" id="stats"></div>
+    <section class="sec" style="margin-top:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h2>蝶式机会雷达</h2>
+        <span id="fit" class="badge">—</span>
+      </div>
+      <div class="card" style="margin-bottom:10px">
+        <div class="s">蝶式动态决策</div>
+        <div class="dec">
+          <div><div class="s">收盘目标</div><div class="v" id="tgt">—</div>
+            <div style="margin-top:10px" class="s">剩余走势范围</div>
+            <div id="ranges"></div>
+          </div>
+          <div><div class="s">蝶式中心 / 翼展</div><div class="v" id="selv">—</div>
+            <div class="s" id="rhl" style="margin-top:18px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="gridwrap">
+        <div class="card">
+          <div class="s">核心中心 × 翼展 <span id="gn"></span></div>
+          <div style="overflow:auto"><table class="fly" id="grid"></table></div>
+          <div class="note">浅低 · 深高。格子为 1 手买入蝶式成本（美元）。— 表示缺腿报价。点击格子选中结构。</div>
+        </div>
+        <div class="card">
+          <div class="s">收益盆地　到期损益（绿/红）· 当前价值（蓝）· 盈亏平衡</div>
+          <canvas id="pnl" height="280"></canvas>
+          <div class="pnlstats" id="pnlst"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:10px">
+        <div class="s">当前查看结构</div>
+        <div class="legs" id="legs"></div>
+      </div>
+    </section>
+    <p class="note" id="notes"></p>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const qs=new URLSearchParams(location.search);
+let SYM=(qs.get('symbol')||qs.get('s')||'SPX').toUpperCase();
+if(!['SPX','SPY','QQQ'].includes(SYM)) SYM='SPX';
+$('sym').value=SYM;
+$('sym').onchange=()=>location.href='/strategy/fly?symbol='+$('sym').value;
+function clocks(){
+  const now=new Date();
+  const fmt=(tz)=>{
+    const p=new Intl.DateTimeFormat('en-GB',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).formatToParts(now);
+    const g=t=>p.find(x=>x.type===t).value;
+    return g('year')+g('month')+g('day')+' '+g('hour')+':'+g('minute')+':'+g('second');
+  };
+  $('bj').textContent='北京：'+fmt('Asia/Shanghai');
+  $('et').textContent='美东：'+fmt('America/New_York');
+}
+clocks(); setInterval(clocks,1000);
+function px(x,n=2){ if(x==null||!isFinite(x)) return '—'; return Number(x).toLocaleString('en-US',{minimumFractionDigits:n,maximumFractionDigits:n}); }
+function usd(x){ if(x==null||!isFinite(x)) return '—'; const s=x<0?'−':(x>0?'+':''); return s+'$'+Math.abs(x).toFixed(2); }
+let DATA=null, SEL=null;
+function resize(cv){
+  const r=cv.getBoundingClientRect(), dp=window.devicePixelRatio||1;
+  cv.width=Math.max(1,r.width*dp); cv.height=Math.max(1,280*dp);
+  const g=cv.getContext('2d'); g.setTransform(dp,0,0,dp,0,0); return {g,w:r.width,h:280};
+}
+function drawPnl(d){
+  const p=d.pnl; const {g,w,h}=resize($('pnl')); g.clearRect(0,0,w,h);
+  if(!p||!p.xs){ g.fillStyle='#64748b'; g.fillText('选择一个蝶式结构', 16, 40); return; }
+  const pad={l:44,r:12,t:16,b:24};
+  const xs=p.xs, ys=p.ys, yn=p.ynow||[];
+  const all=ys.concat(yn.filter(v=>v!=null),[0]);
+  let lo=Math.min(...all), hi=Math.max(...all); const pp=(hi-lo)*0.1||10; lo-=pp; hi+=pp;
+  const x0=xs[0], x1=xs[xs.length-1];
+  const X=x=>pad.l+(x-x0)/Math.max(x1-x0,1)*(w-pad.l-pad.r);
+  const Y=v=>pad.t+(hi-v)/(hi-lo)*(h-pad.t-pad.b);
+  // zero
+  g.strokeStyle='#334155'; g.beginPath(); g.moveTo(pad.l,Y(0)); g.lineTo(w-pad.r,Y(0)); g.stroke();
+  // spot
+  g.setLineDash([4,3]); g.strokeStyle='#94a3b8'; g.beginPath(); g.moveTo(X(d.last),pad.t); g.lineTo(X(d.last),h-pad.b); g.stroke();
+  g.setLineDash([]); g.fillStyle='#94a3b8'; g.font='10px sans-serif'; g.fillText('参考 '+px(d.last), X(d.last)+4, pad.t+10);
+  // expiry pnl
+  g.beginPath();
+  xs.forEach((x,i)=>{ const y=Y(ys[i]); i?g.lineTo(X(x),y):g.moveTo(X(x),y); });
+  g.strokeStyle='#34d399'; g.lineWidth=2; g.stroke();
+  // fill profit green / loss red roughly by segments
+  // current BS
+  g.beginPath(); let on=0;
+  xs.forEach((x,i)=>{ if(yn[i]==null) return; const y=Y(yn[i]); on++===1?g.moveTo(X(x),y):g.lineTo(X(x),y); });
+  g.strokeStyle='#38bdf8'; g.lineWidth=1.4; g.stroke();
+  // BE dots
+  (p.be||[]).forEach(b=>{ g.fillStyle='#60a5fa'; g.beginPath(); g.arc(X(b),Y(0),4,0,7); g.fill(); });
+  g.fillStyle='#64748b'; g.font='10px sans-serif';
+  g.fillText(px(x0,0), pad.l, h-6); g.fillText(px(x1,0), w-pad.r-28, h-6);
+  g.fillText(usd(hi), 2, pad.t+8); g.fillText(usd(lo), 2, h-pad.b);
+}
+function shade(cost, lo, hi){
+  if(cost==null) return '';
+  const t=hi===lo?0:(cost-lo)/(hi-lo);
+  const a=0.25+0.55*t;
+  return 'background:rgba(56,189,248,'+a.toFixed(2)+')';
+}
+function render(d){
+  if(d.error){ $('load').textContent='加载失败：'+d.error; return; }
+  $('load').style.display='none'; $('app').style.display='block';
+  document.title=d.symbol+' 蝶式雷达';
+  const ex=$('exp');
+  ex.innerHTML=(d.exps||[]).map(e=>'<option '+(e===d.expiry?'selected':'')+'>'+e+'</option>').join('');
+  $('meta').textContent=(d.asof_et||'')+(d.approx?'　'+d.approx:'')+'　'+ (d.n_quotes||0)+' 条报价';
+  const p=d.pnl||{}, s=d.sel||{};
+  $('stats').innerHTML =
+    `<div class="card"><h3>指数现价</h3><div class="v amber">${px(d.last)}</div><div class="s">${d.asof_et||''}</div></div>
+     <div class="card"><h3>合约到期</h3><div class="v" style="font-size:18px">${d.expiry||'—'}</div><div class="s">${d.contract||''}　${d.tte||''}</div></div>
+     <div class="card"><h3>所选蝶式中心 / 翼展</h3><div class="v" style="font-size:18px">${s.center?px(s.center,0)+' / '+s.wing+'点': '—'}</div><div class="s">${s.cp? (s.cp==='C'?'Call':'Put'):''}</div></div>
+     <div class="card"><h3>组合买入成本</h3><div class="v">${s.cost!=null?('$'+s.cost.toFixed(2)):'—'}</div><div class="s">到期最大亏损同等金额</div></div>
+     <div class="card"><h3>到期盈亏平衡点</h3><div class="v" style="font-size:16px">${p.be?px(p.be[0])+' / '+px(p.be[1]):'—'}</div><div class="s">${p.inside?'参考价在盈利区内':'参考价在盈利区外，距最近边界 '+(p.edge??'—')+'点'}</div></div>
+     <div class="card"><h3>到期最大盈利</h3><div class="v up">${p.max_profit!=null?usd(p.max_profit):'—'}</div><div class="s">峰值收益 / 成本 ${p.pct!=null?(p.pct.toFixed(1)+'%'):'—'}</div></div>`;
+  $('tgt').textContent=px(d.target,0);
+  $('selv').textContent=s.center? (px(s.center,0)+' / '+s.wing+'点 · '+(s.cp||'')) : '—';
+  $('fit').textContent=d.fit||'—';
+  $('fit').className='badge'+(d.fit==='适配'?' ok':'');
+  const R=d.ranges||{};
+  const lo=R['90']?R['90'][0]:d.last, hi=R['90']?R['90'][1]:d.last;
+  const span=Math.max(hi-lo,1);
+  const mk=(lab,rng,col)=>{
+    if(!rng) return '';
+    const l=((rng[0]-lo)/span*100); const w=((rng[1]-rng[0])/span*100);
+    return `<div class="rng"><span class="lab">${lab}</span><span class="track"><i style="left:${l}%;width:${w}%;background:${col}"></i></span> <span class="s">${px(rng[0])} – ${px(rng[1])}</span></div>`;
+  };
+  $('ranges').innerHTML=mk('90% 预期',R['90'],'#155e75')+mk('75% 预期',R['75'],'#0e7490')+mk('50% 预期',R['50'],'#5eead4')
+    +(R.low!=null?`<div class="s" style="margin-top:6px">已走高低点　低 ${px(R.low)} · 高 ${px(R.high)}</div>`:'');
+  $('rhl').textContent=R.low!=null?('低 '+px(R.low)+'　高 '+px(R.high)):'';
+  // grid
+  const wings=(d.grid&&d.grid[0]&&d.grid[0].cells||[]).map(c=>c.wing);
+  const costs=d.grid?d.grid.flatMap(r=>r.cells.map(c=>c.cost).filter(v=>v!=null)):[];
+  const clo=Math.min(...costs,0), chi=Math.max(...costs,1);
+  let th='<tr><th>中心</th>'+wings.map(w=>'<th>'+w+'点</th>').join('')+'</tr>';
+  let body=(d.grid||[]).map(r=>{
+    const onC=SEL?Math.abs(r.center-SEL.center)<1e-6: (s&&Math.abs(r.center-(s.center||0))<1e-6);
+    return '<tr><th>'+px(r.center, r.center>=1000?0:2)+'</th>'+r.cells.map(c=>{
+      if(c.cost==null) return '<td class="empty">—</td>';
+      const on=onC && s && c.wing===s.wing;
+      return '<td class="'+(on?'on':'')+'" data-c="'+r.center+'" data-w="'+c.wing+'" style="'+shade(c.cost,clo,chi)+'">'
+        +c.cost.toFixed(c.cost>=100?0:1)+'<span class="cp">'+(c.cp||'')+'</span></td>';
+    }).join('')+'</tr>';
+  }).join('');
+  $('grid').innerHTML=th+body;
+  $('gn').textContent='全部 '+(d.grid||[]).length+' 个中心';
+  $('grid').onclick=e=>{
+    const td=e.target.closest('td'); if(!td||!td.dataset.c) return;
+    SEL={center:td.dataset.c, wing:td.dataset.w};
+    load();
+  };
+  drawPnl(d);
+  $('pnlst').innerHTML =
+    `<div><div class="s">到期最大盈利</div><div class="v up">${usd(p.max_profit)}</div></div>
+     <div><div class="s">到期最大亏损</div><div class="v dn">${usd(p.max_loss)}</div></div>
+     <div><div class="s">到期盈亏平衡点</div><div class="v" style="font-size:16px">${p.be?px(p.be[0])+' / '+px(p.be[1]):'—'}</div></div>
+     <div><div class="s">合成买入成本</div><div class="v">${usd(p.debit)}</div></div>
+     <div><div class="s">参考价对应到期损益</div><div class="v ${p.pnl_at_spot>=0?'up':'dn'}">${usd(p.pnl_at_spot)}</div></div>
+     <div><div class="s">参考价距最近盈利边界</div><div class="v">${p.inside?'区内':((p.edge??'—')+' 点')}</div></div>`;
+  $('legs').innerHTML=(p.legs||[]).map(l=>`<div><b>${l.side} ${l.n}×</b> ${px(l.k, l.k>=1000?0:2)} ${l.cp==='C'?'Call':'Put'}</div>`).join('')
+    || '—';
+  const notes=[d.approx, d.source&&d.source.price, d.source&&d.source.now, d.source&&d.source.range,
+    '11/13 当日到期已结束，默认显示下一期 '+d.expiry+'。自动刷新约 10 秒。'].filter(Boolean);
+  $('notes').textContent=notes.join('  ·  ');
+}
+let loading=false;
+async function load(){
+  if(loading) return; loading=true;
+  try{
+    const p=new URLSearchParams({symbol:SYM});
+    if($('exp').value) p.set('expiry',$('exp').value);
+    if($('typ').value) p.set('typ',$('typ').value);
+    if(SEL){ p.set('center',SEL.center); p.set('wing',SEL.wing); }
+    const d=await (await fetch('/strategy/fly/data?'+p,{cache:'no-store'})).json();
+    DATA=d; render(d);
+  }catch(e){ $('load').textContent='加载失败：'+e; }
+  finally{ loading=false; }
+}
+$('rf').onclick=()=>{SEL=null; load();};
+$('latest').onclick=()=>{SEL=null; load();};
+$('exp').onchange=()=>{SEL=null; $('load').style.display='block'; $('app').style.display='none'; load();};
+$('typ').onchange=()=>{ load(); };
+window.addEventListener('resize',()=>{ if(DATA) drawPnl(DATA); });
+load();
+setInterval(load, 10000);
+</script>
+</body>
+</html>

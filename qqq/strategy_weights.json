@@ -1,0 +1,924 @@
+{
+  "asof": "2026-11 估算权重，非官方点位贡献",
+  "coverage_note": "约前 140 只，权重为估算，贡献=权重×涨跌幅×SPX前收",
+  "constituents": [
+    {
+      "ticker": "NVDA",
+      "name": "NVIDIA CORP",
+      "sector": "信息技术",
+      "weight": 0.064
+    },
+    {
+      "ticker": "AAPL",
+      "name": "APPLE INC",
+      "sector": "信息技术",
+      "weight": 0.062
+    },
+    {
+      "ticker": "MSFT",
+      "name": "MICROSOFT CORP",
+      "sector": "信息技术",
+      "weight": 0.06
+    },
+    {
+      "ticker": "AMZN",
+      "name": "AMAZON.COM INC",
+      "sector": "非必需消费",
+      "weight": 0.037
+    },
+    {
+      "ticker": "META",
+      "name": "META PLATFORMS INC",
+      "sector": "通信服务",
+      "weight": 0.0255
+    },
+    {
+      "ticker": "GOOGL",
+      "name": "ALPHABET INC A",
+      "sector": "通信服务",
+      "weight": 0.0205
+    },
+    {
+      "ticker": "GOOG",
+      "name": "ALPHABET INC C",
+      "sector": "通信服务",
+      "weight": 0.0175
+    },
+    {
+      "ticker": "AVGO",
+      "name": "BROADCOM INC",
+      "sector": "信息技术",
+      "weight": 0.0215
+    },
+    {
+      "ticker": "TSLA",
+      "name": "TESLA INC",
+      "sector": "非必需消费",
+      "weight": 0.0165
+    },
+    {
+      "ticker": "BRK.B",
+      "name": "BERKSHIRE HATHAWAY",
+      "sector": "金融",
+      "weight": 0.017
+    },
+    {
+      "ticker": "JPM",
+      "name": "JPMORGAN CHASE",
+      "sector": "金融",
+      "weight": 0.0125
+    },
+    {
+      "ticker": "LLY",
+      "name": "ELI LILLY",
+      "sector": "医疗保健",
+      "weight": 0.0115
+    },
+    {
+      "ticker": "V",
+      "name": "VISA INC",
+      "sector": "金融",
+      "weight": 0.0105
+    },
+    {
+      "ticker": "UNH",
+      "name": "UNITEDHEALTH",
+      "sector": "医疗保健",
+      "weight": 0.0095
+    },
+    {
+      "ticker": "XOM",
+      "name": "EXXON MOBIL",
+      "sector": "能源",
+      "weight": 0.0095
+    },
+    {
+      "ticker": "MA",
+      "name": "MASTERCARD",
+      "sector": "金融",
+      "weight": 0.0085
+    },
+    {
+      "ticker": "COST",
+      "name": "COSTCO",
+      "sector": "必需消费",
+      "weight": 0.008
+    },
+    {
+      "ticker": "JNJ",
+      "name": "JOHNSON & JOHNSON",
+      "sector": "医疗保健",
+      "weight": 0.008
+    },
+    {
+      "ticker": "HD",
+      "name": "HOME DEPOT",
+      "sector": "非必需消费",
+      "weight": 0.0075
+    },
+    {
+      "ticker": "PG",
+      "name": "PROCTER & GAMBLE",
+      "sector": "必需消费",
+      "weight": 0.0075
+    },
+    {
+      "ticker": "ORCL",
+      "name": "ORACLE",
+      "sector": "信息技术",
+      "weight": 0.007
+    },
+    {
+      "ticker": "NFLX",
+      "name": "NETFLIX",
+      "sector": "通信服务",
+      "weight": 0.0068
+    },
+    {
+      "ticker": "ABBV",
+      "name": "ABBVIE",
+      "sector": "医疗保健",
+      "weight": 0.0068
+    },
+    {
+      "ticker": "BAC",
+      "name": "BANK OF AMERICA",
+      "sector": "金融",
+      "weight": 0.0062
+    },
+    {
+      "ticker": "WMT",
+      "name": "WALMART",
+      "sector": "必需消费",
+      "weight": 0.0062
+    },
+    {
+      "ticker": "CRM",
+      "name": "SALESFORCE",
+      "sector": "信息技术",
+      "weight": 0.0055
+    },
+    {
+      "ticker": "KO",
+      "name": "COCA-COLA",
+      "sector": "必需消费",
+      "weight": 0.0055
+    },
+    {
+      "ticker": "CVX",
+      "name": "CHEVRON",
+      "sector": "能源",
+      "weight": 0.0052
+    },
+    {
+      "ticker": "MRK",
+      "name": "MERCK",
+      "sector": "医疗保健",
+      "weight": 0.0052
+    },
+    {
+      "ticker": "AMD",
+      "name": "AMD",
+      "sector": "信息技术",
+      "weight": 0.0052
+    },
+    {
+      "ticker": "PEP",
+      "name": "PEPSICO",
+      "sector": "必需消费",
+      "weight": 0.0048
+    },
+    {
+      "ticker": "CSCO",
+      "name": "CISCO",
+      "sector": "信息技术",
+      "weight": 0.0048
+    },
+    {
+      "ticker": "QCOM",
+      "name": "QUALCOMM",
+      "sector": "信息技术",
+      "weight": 0.0042
+    },
+    {
+      "ticker": "TMUS",
+      "name": "T-MOBILE",
+      "sector": "通信服务",
+      "weight": 0.0042
+    },
+    {
+      "ticker": "ACN",
+      "name": "ACCENTURE",
+      "sector": "信息技术",
+      "weight": 0.004
+    },
+    {
+      "ticker": "MCD",
+      "name": "MCDONALD'S",
+      "sector": "非必需消费",
+      "weight": 0.004
+    },
+    {
+      "ticker": "LIN",
+      "name": "LINDE",
+      "sector": "原材料",
+      "weight": 0.004
+    },
+    {
+      "ticker": "ABT",
+      "name": "ABBOTT",
+      "sector": "医疗保健",
+      "weight": 0.004
+    },
+    {
+      "ticker": "WFC",
+      "name": "WELLS FARGO",
+      "sector": "金融",
+      "weight": 0.004
+    },
+    {
+      "ticker": "GE",
+      "name": "GE",
+      "sector": "工业",
+      "weight": 0.004
+    },
+    {
+      "ticker": "TMO",
+      "name": "THERMO FISHER",
+      "sector": "医疗保健",
+      "weight": 0.0042
+    },
+    {
+      "ticker": "ADBE",
+      "name": "ADOBE",
+      "sector": "信息技术",
+      "weight": 0.0038
+    },
+    {
+      "ticker": "IBM",
+      "name": "IBM",
+      "sector": "信息技术",
+      "weight": 0.0036
+    },
+    {
+      "ticker": "CAT",
+      "name": "CATERPILLAR",
+      "sector": "工业",
+      "weight": 0.0035
+    },
+    {
+      "ticker": "NOW",
+      "name": "SERVICENOW",
+      "sector": "信息技术",
+      "weight": 0.0035
+    },
+    {
+      "ticker": "PM",
+      "name": "PHILIP MORRIS",
+      "sector": "必需消费",
+      "weight": 0.0035
+    },
+    {
+      "ticker": "VZ",
+      "name": "VERIZON",
+      "sector": "通信服务",
+      "weight": 0.0034
+    },
+    {
+      "ticker": "DIS",
+      "name": "DISNEY",
+      "sector": "通信服务",
+      "weight": 0.0034
+    },
+    {
+      "ticker": "INTU",
+      "name": "INTUIT",
+      "sector": "信息技术",
+      "weight": 0.0034
+    },
+    {
+      "ticker": "TXN",
+      "name": "TEXAS INSTRUMENTS",
+      "sector": "信息技术",
+      "weight": 0.0033
+    },
+    {
+      "ticker": "AMAT",
+      "name": "APPLIED MATERIALS",
+      "sector": "信息技术",
+      "weight": 0.0032
+    },
+    {
+      "ticker": "GS",
+      "name": "GOLDMAN SACHS",
+      "sector": "金融",
+      "weight": 0.0032
+    },
+    {
+      "ticker": "AXP",
+      "name": "AMERICAN EXPRESS",
+      "sector": "金融",
+      "weight": 0.003
+    },
+    {
+      "ticker": "RTX",
+      "name": "RTX",
+      "sector": "工业",
+      "weight": 0.003
+    },
+    {
+      "ticker": "ISRG",
+      "name": "INTUITIVE SURGICAL",
+      "sector": "医疗保健",
+      "weight": 0.003
+    },
+    {
+      "ticker": "BKNG",
+      "name": "BOOKING",
+      "sector": "非必需消费",
+      "weight": 0.003
+    },
+    {
+      "ticker": "PFE",
+      "name": "PFIZER",
+      "sector": "医疗保健",
+      "weight": 0.0028
+    },
+    {
+      "ticker": "T",
+      "name": "AT&T",
+      "sector": "通信服务",
+      "weight": 0.0028
+    },
+    {
+      "ticker": "AMGN",
+      "name": "AMGEN",
+      "sector": "医疗保健",
+      "weight": 0.0028
+    },
+    {
+      "ticker": "LOW",
+      "name": "LOWE'S",
+      "sector": "非必需消费",
+      "weight": 0.0028
+    },
+    {
+      "ticker": "NEE",
+      "name": "NEXTERA ENERGY",
+      "sector": "公用事业",
+      "weight": 0.0028
+    },
+    {
+      "ticker": "UNP",
+      "name": "UNION PACIFIC",
+      "sector": "工业",
+      "weight": 0.0025
+    },
+    {
+      "ticker": "HON",
+      "name": "HONEYWELL",
+      "sector": "工业",
+      "weight": 0.0025
+    },
+    {
+      "ticker": "PLTR",
+      "name": "PALANTIR",
+      "sector": "信息技术",
+      "weight": 0.0028
+    },
+    {
+      "ticker": "MS",
+      "name": "MORGAN STANLEY",
+      "sector": "金融",
+      "weight": 0.0025
+    },
+    {
+      "ticker": "BLK",
+      "name": "BLACKROCK",
+      "sector": "金融",
+      "weight": 0.0024
+    },
+    {
+      "ticker": "ETN",
+      "name": "EATON",
+      "sector": "工业",
+      "weight": 0.0024
+    },
+    {
+      "ticker": "PGR",
+      "name": "PROGRESSIVE",
+      "sector": "金融",
+      "weight": 0.0024
+    },
+    {
+      "ticker": "SYK",
+      "name": "STRYKER",
+      "sector": "医疗保健",
+      "weight": 0.0023
+    },
+    {
+      "ticker": "TJX",
+      "name": "TJX",
+      "sector": "非必需消费",
+      "weight": 0.0023
+    },
+    {
+      "ticker": "C",
+      "name": "CITIGROUP",
+      "sector": "金融",
+      "weight": 0.0023
+    },
+    {
+      "ticker": "BSX",
+      "name": "BOSTON SCIENTIFIC",
+      "sector": "医疗保健",
+      "weight": 0.0023
+    },
+    {
+      "ticker": "DHR",
+      "name": "DANAHER",
+      "sector": "医疗保健",
+      "weight": 0.0026
+    },
+    {
+      "ticker": "GILD",
+      "name": "GILEAD",
+      "sector": "医疗保健",
+      "weight": 0.002
+    },
+    {
+      "ticker": "MDT",
+      "name": "MEDTRONIC",
+      "sector": "医疗保健",
+      "weight": 0.002
+    },
+    {
+      "ticker": "DE",
+      "name": "DEERE",
+      "sector": "工业",
+      "weight": 0.0022
+    },
+    {
+      "ticker": "ADP",
+      "name": "ADP",
+      "sector": "工业",
+      "weight": 0.0022
+    },
+    {
+      "ticker": "LRCX",
+      "name": "LAM RESEARCH",
+      "sector": "信息技术",
+      "weight": 0.0022
+    },
+    {
+      "ticker": "ADI",
+      "name": "ANALOG DEVICES",
+      "sector": "信息技术",
+      "weight": 0.002
+    },
+    {
+      "ticker": "CMCSA",
+      "name": "COMCAST",
+      "sector": "通信服务",
+      "weight": 0.0022
+    },
+    {
+      "ticker": "MU",
+      "name": "MICRON",
+      "sector": "信息技术",
+      "weight": 0.0022
+    },
+    {
+      "ticker": "SBUX",
+      "name": "STARBUCKS",
+      "sector": "非必需消费",
+      "weight": 0.0018
+    },
+    {
+      "ticker": "PANW",
+      "name": "PALO ALTO",
+      "sector": "信息技术",
+      "weight": 0.002
+    },
+    {
+      "ticker": "KLAC",
+      "name": "KLA",
+      "sector": "信息技术",
+      "weight": 0.0018
+    },
+    {
+      "ticker": "SNPS",
+      "name": "SYNOPSYS",
+      "sector": "信息技术",
+      "weight": 0.0018
+    },
+    {
+      "ticker": "INTC",
+      "name": "INTEL",
+      "sector": "信息技术",
+      "weight": 0.0016
+    },
+    {
+      "ticker": "BA",
+      "name": "BOEING",
+      "sector": "工业",
+      "weight": 0.0018
+    },
+    {
+      "ticker": "ANET",
+      "name": "ARISTA",
+      "sector": "信息技术",
+      "weight": 0.0018
+    },
+    {
+      "ticker": "UBER",
+      "name": "UBER",
+      "sector": "工业",
+      "weight": 0.0018
+    },
+    {
+      "ticker": "COP",
+      "name": "CONOCOPHILLIPS",
+      "sector": "能源",
+      "weight": 0.0018
+    },
+    {
+      "ticker": "SCHW",
+      "name": "SCHWAB",
+      "sector": "金融",
+      "weight": 0.002
+    },
+    {
+      "ticker": "NKE",
+      "name": "NIKE",
+      "sector": "非必需消费",
+      "weight": 0.0016
+    },
+    {
+      "ticker": "SO",
+      "name": "SOUTHERN",
+      "sector": "公用事业",
+      "weight": 0.0018
+    },
+    {
+      "ticker": "DUK",
+      "name": "DUKE ENERGY",
+      "sector": "公用事业",
+      "weight": 0.0016
+    },
+    {
+      "ticker": "MO",
+      "name": "ALTRIA",
+      "sector": "必需消费",
+      "weight": 0.0016
+    },
+    {
+      "ticker": "CVS",
+      "name": "CVS HEALTH",
+      "sector": "医疗保健",
+      "weight": 0.0016
+    },
+    {
+      "ticker": "MDLZ",
+      "name": "MONDELEZ",
+      "sector": "必需消费",
+      "weight": 0.0016
+    },
+    {
+      "ticker": "CI",
+      "name": "CIGNA",
+      "sector": "医疗保健",
+      "weight": 0.0016
+    },
+    {
+      "ticker": "MMC",
+      "name": "MARSH MCLENNAN",
+      "sector": "金融",
+      "weight": 0.0016
+    },
+    {
+      "ticker": "CB",
+      "name": "CHUBB",
+      "sector": "金融",
+      "weight": 0.0016
+    },
+    {
+      "ticker": "CME",
+      "name": "CME GROUP",
+      "sector": "金融",
+      "weight": 0.0015
+    },
+    {
+      "ticker": "ICE",
+      "name": "INTERCONTINENTAL",
+      "sector": "金融",
+      "weight": 0.0015
+    },
+    {
+      "ticker": "PLD",
+      "name": "PROLOGIS",
+      "sector": "房地产",
+      "weight": 0.0018
+    },
+    {
+      "ticker": "AMT",
+      "name": "AMERICAN TOWER",
+      "sector": "房地产",
+      "weight": 0.0016
+    },
+    {
+      "ticker": "EQIX",
+      "name": "EQUINIX",
+      "sector": "房地产",
+      "weight": 0.0014
+    },
+    {
+      "ticker": "WELL",
+      "name": "WELLTOWER",
+      "sector": "房地产",
+      "weight": 0.0014
+    },
+    {
+      "ticker": "SPG",
+      "name": "SIMON PROPERTY",
+      "sector": "房地产",
+      "weight": 0.001
+    },
+    {
+      "ticker": "SHW",
+      "name": "SHERWIN-WILLIAMS",
+      "sector": "原材料",
+      "weight": 0.0014
+    },
+    {
+      "ticker": "APD",
+      "name": "AIR PRODUCTS",
+      "sector": "原材料",
+      "weight": 0.0012
+    },
+    {
+      "ticker": "FCX",
+      "name": "FREEPORT",
+      "sector": "原材料",
+      "weight": 0.0012
+    },
+    {
+      "ticker": "NEM",
+      "name": "NEWMONT",
+      "sector": "原材料",
+      "weight": 0.001
+    },
+    {
+      "ticker": "CTVA",
+      "name": "CORTEVA",
+      "sector": "原材料",
+      "weight": 0.0008
+    },
+    {
+      "ticker": "ECL",
+      "name": "ECOLAB",
+      "sector": "原材料",
+      "weight": 0.001
+    },
+    {
+      "ticker": "NSC",
+      "name": "NORFOLK SOUTHERN",
+      "sector": "工业",
+      "weight": 0.0012
+    },
+    {
+      "ticker": "LMT",
+      "name": "LOCKHEED MARTIN",
+      "sector": "工业",
+      "weight": 0.0016
+    },
+    {
+      "ticker": "UPS",
+      "name": "UPS",
+      "sector": "工业",
+      "weight": 0.0014
+    },
+    {
+      "ticker": "GD",
+      "name": "GENERAL DYNAMICS",
+      "sector": "工业",
+      "weight": 0.0012
+    },
+    {
+      "ticker": "WM",
+      "name": "WASTE MANAGEMENT",
+      "sector": "工业",
+      "weight": 0.0014
+    },
+    {
+      "ticker": "ITW",
+      "name": "ILLINOIS TOOL",
+      "sector": "工业",
+      "weight": 0.0012
+    },
+    {
+      "ticker": "PH",
+      "name": "PARKER HANNIFIN",
+      "sector": "工业",
+      "weight": 0.0014
+    },
+    {
+      "ticker": "EMR",
+      "name": "EMERSON",
+      "sector": "工业",
+      "weight": 0.0012
+    },
+    {
+      "ticker": "AEP",
+      "name": "AMERICAN ELECTRIC",
+      "sector": "公用事业",
+      "weight": 0.001
+    },
+    {
+      "ticker": "SRE",
+      "name": "SEMPRA",
+      "sector": "公用事业",
+      "weight": 0.001
+    },
+    {
+      "ticker": "D",
+      "name": "DOMINION",
+      "sector": "公用事业",
+      "weight": 0.0008
+    },
+    {
+      "ticker": "EXC",
+      "name": "EXELON",
+      "sector": "公用事业",
+      "weight": 0.0008
+    },
+    {
+      "ticker": "PEG",
+      "name": "PSEG",
+      "sector": "公用事业",
+      "weight": 0.0008
+    },
+    {
+      "ticker": "O",
+      "name": "REALTY INCOME",
+      "sector": "房地产",
+      "weight": 0.0008
+    },
+    {
+      "ticker": "CCI",
+      "name": "CROWN CASTLE",
+      "sector": "房地产",
+      "weight": 0.0008
+    },
+    {
+      "ticker": "PSA",
+      "name": "PUBLIC STORAGE",
+      "sector": "房地产",
+      "weight": 0.0008
+    },
+    {
+      "ticker": "XEL",
+      "name": "XCEL ENERGY",
+      "sector": "公用事业",
+      "weight": 0.0008
+    },
+    {
+      "ticker": "PCG",
+      "name": "PG&E",
+      "sector": "公用事业",
+      "weight": 0.0008
+    },
+    {
+      "ticker": "SLB",
+      "name": "SCHLUMBERGER",
+      "sector": "能源",
+      "weight": 0.0012
+    },
+    {
+      "ticker": "EOG",
+      "name": "EOG RESOURCES",
+      "sector": "能源",
+      "weight": 0.0012
+    },
+    {
+      "ticker": "MPC",
+      "name": "MARATHON PETROLEUM",
+      "sector": "能源",
+      "weight": 0.001
+    },
+    {
+      "ticker": "PSX",
+      "name": "PHILLIPS 66",
+      "sector": "能源",
+      "weight": 0.001
+    },
+    {
+      "ticker": "WMB",
+      "name": "WILLIAMS",
+      "sector": "能源",
+      "weight": 0.001
+    },
+    {
+      "ticker": "OXY",
+      "name": "OCCIDENTAL",
+      "sector": "能源",
+      "weight": 0.0008
+    },
+    {
+      "ticker": "CL",
+      "name": "COLGATE",
+      "sector": "必需消费",
+      "weight": 0.0014
+    },
+    {
+      "ticker": "KMB",
+      "name": "KIMBERLY-CLARK",
+      "sector": "必需消费",
+      "weight": 0.0008
+    },
+    {
+      "ticker": "GIS",
+      "name": "GENERAL MILLS",
+      "sector": "必需消费",
+      "weight": 0.0008
+    },
+    {
+      "ticker": "KR",
+      "name": "KROGER",
+      "sector": "必需消费",
+      "weight": 0.0008
+    },
+    {
+      "ticker": "TGT",
+      "name": "TARGET",
+      "sector": "必需消费",
+      "weight": 0.0012
+    },
+    {
+      "ticker": "SYY",
+      "name": "SYSCO",
+      "sector": "必需消费",
+      "weight": 0.0008
+    },
+    {
+      "ticker": "EL",
+      "name": "ESTEE LAUDER",
+      "sector": "必需消费",
+      "weight": 0.0006
+    },
+    {
+      "ticker": "F",
+      "name": "FORD",
+      "sector": "非必需消费",
+      "weight": 0.0008
+    },
+    {
+      "ticker": "GM",
+      "name": "GENERAL MOTORS",
+      "sector": "非必需消费",
+      "weight": 0.001
+    },
+    {
+      "ticker": "MAR",
+      "name": "MARRIOTT",
+      "sector": "非必需消费",
+      "weight": 0.0012
+    },
+    {
+      "ticker": "CMG",
+      "name": "CHIPOTLE",
+      "sector": "非必需消费",
+      "weight": 0.0012
+    },
+    {
+      "ticker": "ORLY",
+      "name": "O'REILLY",
+      "sector": "非必需消费",
+      "weight": 0.0012
+    },
+    {
+      "ticker": "ABNB",
+      "name": "AIRBNB",
+      "sector": "非必需消费",
+      "weight": 0.001
+    },
+    {
+      "ticker": "CRWD",
+      "name": "CROWDSTRIKE",
+      "sector": "信息技术",
+      "weight": 0.0014
+    },
+    {
+      "ticker": "APP",
+      "name": "APPLOVIN",
+      "sector": "信息技术",
+      "weight": 0.0016
+    },
+    {
+      "ticker": "CDNS",
+      "name": "CADENCE",
+      "sector": "信息技术",
+      "weight": 0.0014
+    }
+  ]
+}

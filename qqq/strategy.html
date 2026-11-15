@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>美股期权策略雷达</title>
+<style>
+:root{--bg:#070b14;--card:#101826;--card2:#0d1520;--line:#1c2a3d;--txt:#d7e0ee;--mut:#7d8b9d;--cyan:#5eead4;--cyan2:#22d3ee;--green:#34d399;--red:#fb7185;--amber:#fbbf24;--blue:#60a5fa;}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"PingFang SC","Noto Sans SC",system-ui,sans-serif;}
+a{color:#9cd5ff;text-decoration:none}
+#wrap{max-width:1180px;margin:0 auto;padding:12px 14px 80px;}
+header.hero{text-align:center;padding:8px 0 10px;position:relative}
+header.hero h1{margin:0;font-size:28px;font-weight:750;letter-spacing:.08em;background:linear-gradient(180deg,#ecfeff,#5eead4 55%,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 24px rgba(34,211,238,.25);filter:drop-shadow(0 0 10px rgba(94,234,212,.35))}
+#clocks{display:inline-flex;gap:16px;margin-top:8px;padding:6px 16px;border:1px solid var(--line);border-radius:10px;color:var(--mut);font-size:13px;background:#0a121c}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:12px 0}
+.bar label{color:var(--mut);font-size:12px;margin-right:4px}
+.bar select,.bar button{background:#0a121c;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px}
+.bar button{background:#155e75;border-color:#1e738a;cursor:pointer}
+.pin{display:flex;align-items:center;gap:8px;margin-left:auto}
+.pin .lab{font-size:11px;color:var(--mut)}
+.gauge{position:relative;width:150px;height:14px;border-radius:8px;background:linear-gradient(90deg,#fb7185,#fbbf24 50%,#34d399)}
+.gauge i{position:absolute;top:-3px;width:3px;height:20px;background:#fff;border-radius:2px;box-shadow:0 0 6px #fff}
+.tabs{display:flex;gap:22px;justify-content:center;margin:14px 0 10px;font-size:15px}
+.tabs a{color:var(--mut);padding-bottom:6px;border-bottom:2px solid transparent}
+.tabs a.on{color:var(--cyan);border-color:var(--cyan)}
+.cards{display:grid;grid-template-columns:2.2fr 1fr 1fr 1.1fr 1.2fr 1.1fr;gap:8px;margin:10px 0}
+@media(max-width:1024px){.cards{grid-template-columns:1fr 1fr 1fr}}
+@media(max-width:720px){.cards{grid-template-columns:1fr 1fr}#wrap{padding:8px 8px 88px}header.hero h1{font-size:22px}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
+.card h3{margin:0 0 4px;font-size:11px;color:var(--mut);font-weight:600;display:flex;justify-content:space-between;gap:6px}
+.card .v{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.card .s{font-size:11px;color:var(--mut);margin-top:3px;line-height:1.4}
+.macro{grid-column:1/2;background:linear-gradient(180deg,#102033,#101826)}
+.info{cursor:help;color:var(--cyan2);font-size:11px;border:1px solid #164e63;border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;position:relative}
+.info:hover span,.tip:hover .tipb{display:block}
+.info span,.tipb{display:none;position:absolute;z-index:20;left:0;top:18px;width:240px;background:#0b1220;border:1px solid var(--line);color:#cbd5e1;padding:8px;border-radius:8px;font-size:11px;font-weight:400;line-height:1.45;box-shadow:0 8px 24px #000a}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:900px){.row{grid-template-columns:1fr}}
+.sec{margin:14px 0}
+.sec h2{margin:0 0 8px;font-size:20px;color:var(--cyan2);font-weight:700}
+.sec .sub{color:var(--mut);font-size:12px;margin:0 0 8px}
+.stat6{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+@media(max-width:900px){.stat6{grid-template-columns:repeat(3,1fr)}}
+.stat6 .card .v{font-size:18px}
+.chartbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 8px 4px;position:relative}
+.chartbox canvas{width:100%;height:280px;display:block}
+.leg{font-size:11px;color:var(--mut);display:flex;flex-wrap:wrap;gap:8px 12px;padding:2px 6px 6px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:3px}
+#gexTbl{position:absolute;left:12px;top:86px;background:rgba(8,14,24,.86);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:11px;z-index:3}
+#gexTbl table{border-collapse:collapse}
+#gexTbl td{padding:1px 6px;color:#9fb0c3}
+#gexTbl td:first-child{color:var(--mut)}
+.grid3{display:grid;grid-template-columns:1.2fr 1.5fr 1fr;gap:10px}
+@media(max-width:900px){.grid3{grid-template-columns:1fr}}
+.sticky{position:sticky;bottom:36px;z-index:8;display:grid;grid-template-columns:repeat(6,1fr);gap:0;background:#0c1420f2;border:1px solid var(--line);border-radius:12px;margin-top:12px;backdrop-filter:blur(8px)}
+.sticky div{padding:8px 6px;text-align:center;border-right:1px solid var(--line)}
+.sticky div:last-child{border:0}
+.sticky b{display:block;font-size:16px;margin-top:2px}
+.sticky span{font-size:11px;color:var(--mut)}
+@media(max-width:720px){.sticky{grid-template-columns:repeat(3,1fr);bottom:46px}}
+.up{color:var(--green)} .dn{color:var(--red)} .cy{color:var(--cyan)}
+.m7{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
+@media(max-width:900px){.m7{grid-template-columns:repeat(4,1fr)}}
+.m7 .card{text-align:center;padding:12px 6px}
+.m7 .nm{font-size:13px;color:#fda4af;font-weight:700}
+.m7 .upcard{background:#0d261c;border-color:#14532d}
+.m7 .upcard .nm{color:#6ee7b7}
+.m7 .dncard{background:#2a1218;border-color:#7f1d1d}
+.treewrap{display:grid;grid-template-columns:1.6fr 1fr;gap:10px}
+@media(max-width:900px){.treewrap{grid-template-columns:1fr}}
+#tree{position:relative;min-height:320px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+#tree .cell{position:absolute;padding:8px;overflow:hidden;border:1px solid #0b1220;cursor:pointer}
+#tree .cell.up{background:#0f3d32} #tree .cell.dn{background:#4a1520}
+#detail .row2{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-bottom:1px solid #1a2533}
+.drv{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:900px){.drv{grid-template-columns:1fr}}
+.barline{display:flex;align-items:center;gap:8px;margin:7px 0;font-size:13px}
+.barline .nm{width:86px;color:#c5d0de;flex-shrink:0}
+.barline .track{flex:1;height:12px;background:#1a2430;border-radius:4px;overflow:hidden}
+.barline .fill{height:100%;border-radius:4px}
+.note{font-size:11px;color:#667787;margin-top:8px;line-height:1.45}
+.badge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:8px;background:#1e293b;color:#94a3b8;margin-left:6px}
+#load{color:var(--mut);text-align:center;padding:20px}
+nav.bot{position:fixed;bottom:6px;left:8px;z-index:99;font:12px sans-serif;background:#111a;padding:3px 8px;border-radius:6px}
+</style>
+</head>
+<body>
+<nav class="bot">
+<a href="/" style="color:#9cf;margin-right:10px">期权看板</a>
+<a href="/qqq" style="color:#9cf;margin-right:10px">QQQ实时</a>
+<a href="/qqq/chart?s=QQQ" style="color:#9cf;margin-right:10px">关键点位</a>
+<a href="/qqq/radar" style="color:#fbbf24;margin-right:10px">期权雷达</a>
+<a href="/echo?s=QQQ" style="color:#9cf;margin-right:10px">QQQ/SPX 5分</a>
+<a href="/mbot?s=SPX" style="color:#9cf;margin-right:10px">mBOT 5分</a>
+<a href="/strategy?symbol=QQQ" style="color:#fff;margin-right:10px">策略雷达</a>
+<a href="/strategy/fly?symbol=SPX" style="color:#9cf">蝶式雷达</a>
+</nav>
+<div id="wrap">
+  <header class="hero">
+    <h1>美股期权策略雷达</h1>
+    <div id="clocks"><span id="bj">北京：—</span><span id="et">美东：—</span></div>
+  </header>
+  <div class="bar">
+    <div><label>期权日期</label><select id="exp"></select></div>
+    <div><label>股票代码</label><select id="sym">
+      <option>QQQ</option><option>SPY</option><option>SPX</option>
+    </select></div>
+    <div><label>时间点</label><select id="tp"><option value="latest">最新（收盘快照）</option></select></div>
+    <div class="pin">
+      <div class="lab">钉盘稳定<br><b id="pinlbl">—</b></div>
+      <div class="gauge" title="钉盘稳定"><i id="pinmk"></i></div>
+    </div>
+    <button id="rf">刷新</button>
+  </div>
+  <div class="tabs">
+    <a href="#struct" class="on">收盘结构地图</a>
+    <a href="#intraday">日内详细指标</a>
+    <a href="#compass">大盘风向标</a>
+  </div>
+  <div id="load">正在加载期权链与成分股报价，第一次大约 20–40 秒…</div>
+  <div id="app" style="display:none">
+    <div class="cards" id="macro"></div>
+    <section class="sec" id="struct">
+      <div style="display:flex;justify-content:space-between;align-items:end;gap:8px;flex-wrap:wrap">
+        <div>
+          <div class="sub" style="letter-spacing:.08em">CURRENT-DAY EXPIRY · CLOSE STRUCTURE</div>
+          <h2 id="stitle">收盘结构地图</h2>
+          <p class="sub">左侧识别 GEX 慢变量边界，右侧解释实时订单流与收盘路径。</p>
+        </div>
+        <div class="sub" id="stmeta"></div>
+      </div>
+      <div class="stat6" id="st6"></div>
+      <div class="row" style="margin-top:10px">
+        <div class="chartbox">
+          <div class="leg">GEX结构图 <span id="gexleg"></span></div>
+          <div id="gexTbl"></div>
+          <canvas id="gexCv" height="280"></canvas>
+        </div>
+        <div class="chartbox">
+          <div class="leg">实时订单流 <span style="margin-left:8px"><i class="dot" style="background:#e2e8f0"></i>真实 Spot <i class="dot" style="background:#c084fc"></i>Short Gamma <i class="dot" style="background:#2dd4bf"></i>Long Gamma</span></div>
+          <canvas id="flowCv" height="280"></canvas>
+        </div>
+      </div>
+    </section>
+    <section class="sec" id="intraday">
+      <div class="grid3">
+        <div class="chartbox"><div class="leg">Gex By Vol / OI <span class="badge">周末仅当前值</span></div><canvas id="tsCv" height="220"></canvas></div>
+        <div class="chartbox"><div class="leg">核心收盘候选 Strike</div><canvas id="candCv" height="220"></canvas></div>
+        <div class="chartbox"><div class="leg">Implied Vol Smile <i class="dot" style="background:#34d399"></i>Call IV <i class="dot" style="background:#fb7185"></i>Put IV</div><canvas id="smileCv" height="220"></canvas></div>
+      </div>
+    </section>
+    <div class="sticky" id="foot"></div>
+    <section class="sec" id="compass">
+      <div class="sub">SPX MARKET COMPASS</div>
+      <h2>大盘风向标</h2>
+      <div id="compHead"></div>
+      <div class="card" id="repair" style="margin:10px 0"></div>
+      <div class="sub" id="bdrow"></div>
+      <div class="m7" id="m7"></div>
+      <div class="sub" id="m7foot" style="margin:6px 0 12px"></div>
+      <div class="treewrap">
+        <div>
+          <div class="leg">板块热力图 <span class="badge">面积=估算权重</span></div>
+          <div id="tree"></div>
+          <div class="note" id="treenote"></div>
+        </div>
+        <div class="card" id="detail"><h3>点击板块查看贡献股</h3></div>
+      </div>
+      <div class="drv" style="margin-top:12px">
+        <div class="card" id="drivers"></div>
+        <div class="card" id="watch"></div>
+      </div>
+    </section>
+    <p class="note" id="notes"></p>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const qs = new URLSearchParams(location.search);
+let SYM = (qs.get('symbol')||qs.get('s')||'QQQ').toUpperCase();
+if(!['QQQ','SPY','SPX'].includes(SYM)) SYM='QQQ';
+$('sym').value = SYM;
+$('sym').onchange = () => location.href='/strategy?symbol='+$('sym').value;
+function clocks(){
+  const now=new Date();
+  const f=(tz)=> new Intl.DateTimeFormat('sv-SE',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(now).replace(/-/g,'').replace(' ',' ');
+  // sv-SE gives YYYY-MM-DD HH:MM:SS
+  const fmt=(tz)=>{
+    const p=new Intl.DateTimeFormat('en-GB',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).formatToParts(now);
+    const g=t=>p.find(x=>x.type===t).value;
+    return g('year')+g('month')+g('day')+' '+g('hour')+':'+g('minute')+':'+g('second');
+  };
+  $('bj').textContent='北京：'+fmt('Asia/Shanghai');
+  $('et').textContent='美东：'+fmt('America/New_York');
+}
+clocks(); setInterval(clocks,1000);
+function money(x, d=2){
+  if(x==null||!isFinite(x)) return '—';
+  const s=x<0?'−':(x>0?'+':''); const a=Math.abs(x);
+  if(a>=1e12) return s+(a/1e12).toFixed(d)+'T';
+  if(a>=1e9) return s+(a/1e9).toFixed(d)+'B';
+  if(a>=1e6) return s+(a/1e6).toFixed(d)+'M';
+  if(a>=1e3) return s+(a/1e3).toFixed(d)+'K';
+  return s+a.toFixed(d);
+}
+function px(x,n){ if(x==null||!isFinite(x)) return '—'; n=n??(Math.abs(x)>=100?2:2); return Number(x).toLocaleString('en-US',{minimumFractionDigits:n,maximumFractionDigits:n}); }
+function tip(html, text){ return html+' <span class="info">ℹ<span>'+text+'</span></span>'; }
+function resize(cv){
+  const r=cv.getBoundingClientRect(), dp=window.devicePixelRatio||1;
+  cv.width=Math.max(1,r.width*dp); cv.height=Math.max(1,(parseInt(cv.getAttribute('height'))||220)*dp);
+  const g=cv.getContext('2d'); g.setTransform(dp,0,0,dp,0,0); return {g,w:r.width,h:parseInt(cv.getAttribute('height'))||220};
+}
+function drawSpotGex(cv, d, which){
+  const {g,w,h}=resize(cv);
+  g.clearRect(0,0,w,h);
+  const pad={l:48,r:16,t:16,b:22};
+  const path=d.spot_path||[];
+  const bars=d.gex_bars||[];
+  const L=d.levels||{};
+  let lo=L.low, hi=L.high;
+  path.forEach(p=>{ lo=Math.min(lo??p.c,p.c); hi=Math.max(hi??p.c,p.c); });
+  bars.forEach(b=>{ lo=Math.min(lo??b.k,b.k); hi=Math.max(hi??b.k,b.k); });
+  if(lo==null){return}
+  const padp=(hi-lo)*0.08||1; lo-=padp; hi+=padp;
+  const Y=v=> pad.t + (hi-v)/(hi-lo)*(h-pad.t-pad.b);
+  const X=t=>{
+    if(!path.length) return pad.l;
+    const t0=path[0].t, t1=path[path.length-1].t||t0+1;
+    return pad.l + (t-t0)/Math.max(t1-t0,1)*(w-pad.l-pad.r);
+  };
+  // zone
+  const z=d.heur&&d.heur.close_zone;
+  if(z){
+    g.fillStyle='rgba(45,212,191,.10)';
+    g.fillRect(pad.l, Y(z[1]), w-pad.l-pad.r, Math.max(2, Y(z[0])-Y(z[1])));
+  }
+  // lines
+  const lines=[['zero_gamma','#eab308','Zero Gamma'],['major_pos','#34d399','Major +'],['major_neg','#f87171','Major −'],['support','#5eead4','支撑'],['resist','#fb7185','阻力']];
+  lines.forEach(([k,c,lab])=>{
+    if(L[k]==null) return;
+    g.strokeStyle=c; g.lineWidth=1; g.setLineDash(k==='zero_gamma'||k==='resist'||k==='support'?[4,3]:[]);
+    g.beginPath(); g.moveTo(pad.l,Y(L[k])); g.lineTo(w-pad.r,Y(L[k])); g.stroke();
+    g.setLineDash([]); g.fillStyle=c; g.font='11px sans-serif';
+    g.fillText(lab+' '+px(L[k]), w-pad.r-120, Y(L[k])-3);
+  });
+  // spot path
+  if(path.length){
+    g.strokeStyle='#e2e8f0'; g.lineWidth=1.4; g.beginPath();
+    path.forEach((p,i)=>{ const x=X(p.t),y=Y(p.c); i?g.lineTo(x,y):g.moveTo(x,y); });
+    g.stroke();
+  }
+  // gex / flow bars at the right half
+  const key = which==='flow' ? 'gex_vol' : 'gex_oi';
+  const mx = Math.max(1, ...bars.map(b=>Math.abs(b[key]||0)));
+  const mid = pad.l + (w-pad.l-pad.r)*0.62;
+  const maxw = (w-pad.r-mid)-4;
+  bars.forEach(b=>{
+    const val=b[key]||0; if(!val) return;
+    const bw=Math.max(1, Math.abs(val)/mx*maxw);
+    const y=Y(b.k);
+    g.fillStyle = val>=0 ? (which==='flow'?'#2dd4bf':'#4ade80') : (which==='flow'?'#c084fc':'#f87171');
+    g.globalAlpha=0.85;
+    if(val>=0) g.fillRect(mid, y-3, bw, 6);
+    else g.fillRect(mid-bw, y-3, bw, 6);
+    g.globalAlpha=1;
+  });
+  // axis
+  g.fillStyle='#64748b'; g.font='10px sans-serif';
+  g.fillText(px(hi), 4, pad.t+8); g.fillText(px(lo), 4, h-pad.b);
+  if(path.length){
+    const t0=new Date(path[0].t*1000), t1=new Date(path[path.length-1].t*1000);
+    const hh=t=> new Intl.DateTimeFormat('en-GB',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hour12:false}).format(t);
+    g.fillText(hh(t0), pad.l, h-6); g.fillText(hh(t1), w-pad.r-32, h-6);
+  }
+}
+function drawTS(cv,d){
+  const {g,w,h}=resize(cv); g.clearRect(0,0,w,h);
+  const snaps=d.snaps||[], cur=d.current_snap;
+  const pts=snaps.concat(cur?[cur]:[]);
+  const pad={l:44,r:44,t:12,b:20};
+  if(pts.length<1){ g.fillStyle='#64748b'; g.fillText('等待连续快照', 16, h/2); return; }
+  const t0=pts[0].t, t1=pts[pts.length-1].t||t0+1;
+  const X=t=>pad.l+(t-t0)/Math.max(t1-t0,1)*(w-pad.l-pad.r);
+  const vos=pts.map(p=>p.gex_vol), ois=pts.map(p=>p.gex_oi);
+  const ext=(a)=>{const mn=Math.min(...a),mx=Math.max(...a); const p=(mx-mn)*0.15||1; return [mn-p,mx+p];};
+  const [v0,v1]=ext(vos), [o0,o1]=ext(ois);
+  const Yv=v=>pad.t+(v1-v)/(v1-v0)*(h-pad.t-pad.b);
+  const Yo=v=>pad.t+(o1-v)/(o1-o0)*(h-pad.t-pad.b);
+  g.beginPath(); g.strokeStyle='#38bdf8'; g.lineWidth=1.4;
+  pts.forEach((p,i)=>{const x=X(p.t),y=Yv(p.gex_vol); i?g.lineTo(x,y):g.moveTo(x,y);}); g.stroke();
+  g.beginPath(); g.strokeStyle='#4ade80';
+  pts.forEach((p,i)=>{const x=X(p.t),y=Yo(p.gex_oi); i?g.lineTo(x,y):g.moveTo(x,y);}); g.stroke();
+  g.fillStyle='#64748b'; g.font='10px sans-serif';
+  g.fillText(money(v1,1),4,pad.t+8); g.fillText(money(o1,1),w-pad.r+2,pad.t+8);
+  if(pts.length<3){ g.fillStyle='#94a3b8'; g.fillText('历史快照从下个交易日起积累', pad.l, h-6); }
+}
+function drawCand(cv,d){
+  const {g,w,h}=resize(cv); g.clearRect(0,0,w,h);
+  const run=d.running||[];
+  const pad={l:44,r:10,t:12,b:20};
+  if(!run.length){return}
+  const keys=['poc','vwap'];
+  let lo=Math.min(...run.map(r=>Math.min(r.poc,r.vwap,r.spot)));
+  let hi=Math.max(...run.map(r=>Math.max(r.poc,r.vwap,r.spot)));
+  const L=d.levels||{};
+  ['gamma_peak','core_magnet','vwas_long','vwas_short','max_pain'].forEach(k=>{ if(L[k]!=null){lo=Math.min(lo,L[k]);hi=Math.max(hi,L[k]);}});
+  const p=(hi-lo)*0.08||1; lo-=p; hi+=p;
+  const t0=run[0].t,t1=run[run.length-1].t||t0+1;
+  const X=t=>pad.l+(t-t0)/Math.max(t1-t0,1)*(w-pad.l-pad.r);
+  const Y=v=>pad.t+(hi-v)/(hi-lo)*(h-pad.t-pad.b);
+  const cols={poc:'#fbbf24',vwap:'#38bdf8',gamma_peak:'#22d3ee',core_magnet:'#a78bfa',vwas_long:'#34d399',vwas_short:'#fb7185',max_pain:'#f97316',vertex5:'#e879f9'};
+  g.strokeStyle='#94a3b8'; g.lineWidth=1; g.beginPath();
+  run.forEach((r,i)=>{const x=X(r.t),y=Y(r.spot); i?g.lineTo(x,y):g.moveTo(x,y)}); g.stroke();
+  g.strokeStyle=cols.poc; g.beginPath();
+  run.forEach((r,i)=>{const x=X(r.t),y=Y(r.poc); i?g.lineTo(x,y):g.moveTo(x,y)}); g.stroke();
+  // current-only horizontals (dashed)
+  g.setLineDash([4,3]);
+  [['gamma_peak','Gamma Peak'],['core_magnet','Core Magnet'],['vwas_long','VWAS L'],['vwas_short','VWAS S'],['max_pain','Max Pain']].forEach(([k,lab])=>{
+    if(L[k]==null) return;
+    g.strokeStyle=cols[k]||'#888'; g.beginPath(); g.moveTo(pad.l,Y(L[k])); g.lineTo(w-pad.r,Y(L[k])); g.stroke();
+    g.fillStyle=cols[k]||'#888'; g.font='10px sans-serif'; g.fillText(lab, w-pad.r-70, Y(L[k])-2);
+  });
+  g.setLineDash([]);
+  g.fillStyle='#64748b'; g.font='10px sans-serif'; g.fillText(px(hi),4,pad.t+8); g.fillText(px(lo),4,h-pad.b);
+}
+function drawSmile(cv,d){
+  const {g,w,h}=resize(cv); g.clearRect(0,0,w,h);
+  const sm=d.smile||[]; if(!sm.length) return;
+  const pad={l:36,r:10,t:12,b:22};
+  const ks=sm.map(x=>x.k), ivs=sm.flatMap(x=>[x.call,x.put]).filter(v=>v>0);
+  const lo=Math.min(...ks), hi=Math.max(...ks), i0=0, i1=Math.max(...ivs)*1.05;
+  const X=k=>pad.l+(k-lo)/Math.max(hi-lo,1)*(w-pad.l-pad.r);
+  const Y=v=>pad.t+(i1-v)/(i1-i0)*(h-pad.t-pad.b);
+  g.strokeStyle='#1e293b'; g.beginPath(); g.moveTo(X(d.last||lo),pad.t); g.lineTo(X(d.last||lo),h-pad.b); g.stroke();
+  [['call','#34d399'],['put','#fb7185']].forEach(([k,c])=>{
+    g.strokeStyle=c; g.lineWidth=1.5; g.beginPath();
+    let on=0;
+    sm.forEach(p=>{ if(p[k]==null) return; const x=X(p.k),y=Y(p[k]); on++===1?g.moveTo(x,y):g.lineTo(x,y); });
+    g.stroke();
+  });
+  g.fillStyle='#64748b'; g.font='10px sans-serif';
+  g.fillText(px(lo,0),pad.l,h-6); g.fillText(px(hi,0),w-pad.r-24,h-6);
+  g.fillText((i1*100).toFixed(0)+'%',4,pad.t+8);
+}
+function squarify(items,x,y,w,h){
+  // slice-and-dice by weight
+  const tot=items.reduce((s,i)=>s+i.w,0)||1;
+  const out=[];
+  // vertical slices in 2 rows roughly
+  const sorted=items.slice().sort((a,b)=>b.w-a.w);
+  let row=[], rowW=0, target=tot*(w>h? h/w*0.5+0.25: 0.45);
+  const flush=(rr,xx,yy,ww,hh,vert)=>{
+    const tw=rr.reduce((s,i)=>s+i.w,0)||1; let a=0;
+    rr.forEach(it=>{
+      const frac=it.w/tw;
+      if(vert){ out.push({...it,x:xx,y:yy+a,w:ww,h:hh*frac}); a+=hh*frac; }
+      else { out.push({...it,x:xx+a,y:yy,w:ww*frac,h:hh}); a+=ww*frac; }
+    });
+  };
+  let xx=x, yy=y, ww=w, hh=h, acc=0;
+  const rows=[]; let cur=[];
+  sorted.forEach((it,i)=>{
+    cur.push(it); acc+=it.w;
+    if(acc>=tot*0.42 || i===sorted.length-1){ rows.push(cur); cur=[]; }
+  });
+  if(cur.length) rows.push(cur);
+  // 2 or 3 bands
+  let yy0=y;
+  const bands = rows.length<=1? [sorted] : (rows[0] ? [rows[0], rows.slice(1).flat()] : [sorted]);
+  const b1w = bands[0].reduce((s,i)=>s+i.w,0)/tot;
+  flush(bands[0], x, y, w*Math.max(0.38, Math.min(0.7,b1w+0.08)), h, true);
+  const used=w*Math.max(0.38, Math.min(0.7,b1w+0.08));
+  if(bands[1]&&bands[1].length){
+    // split remaining into two
+    const rest=bands[1], mid=Math.ceil(rest.length/2);
+    const top=rest.slice(0,mid), bot=rest.slice(mid);
+    const th = top.reduce((s,i)=>s+i.w,0) / (rest.reduce((s,i)=>s+i.w,0)||1);
+    flush(top, x+used, y, w-used, h*th, false);
+    if(bot.length) flush(bot, x+used, y+h*th, w-used, h*(1-th), false);
+  }
+  return out;
+}
+function renderTree(d){
+  const el=$('tree'); el.innerHTML='';
+  const secs=(d.compass&&d.compass.sectors)||[];
+  const r=el.getBoundingClientRect();
+  const layout=squarify(secs.map(s=>({...s,w:s.weight||0.001})),0,0,r.width||700, r.height||320);
+  layout.forEach(s=>{
+    const div=document.createElement('div');
+    div.className='cell '+(s.pts>=0?'up':'dn');
+    div.style.left=s.x+'px'; div.style.top=s.y+'px'; div.style.width=s.w+'px'; div.style.height=s.h+'px';
+    div.innerHTML='<b>'+s.sector+'</b><div>'+(s.pct>=0?'+':'')+s.pct.toFixed(2)+'%</div>'
+      +(s.h>48? '<div>'+(s.up||0)+'涨 / '+(s.dn||0)+'跌</div><div>贡献 '+(s.pts>=0?'+':'')+s.pts.toFixed(2)+'点</div>':'')
+      +(s.h>72 && s.lead? '<div>主导 '+s.lead+'</div>':'');
+    div.onclick=()=>showSec(s);
+    el.appendChild(div);
+  });
+  if(secs[0]) showSec(secs[0]);
+  $('treenote').textContent=(d.compass.breadth&&d.compass.breadth.note)||'';
+}
+function showSec(s){
+  const names=s.names||[];
+  const up=names.filter(n=>n.pts>0).sort((a,b)=>b.pts-a.pts).slice(0,6);
+  const dn=names.filter(n=>n.pts<0).sort((a,b)=>a.pts-b.pts).slice(0,6);
+  $('detail').innerHTML='<h3>'+s.sector+'</h3>'
+    +'<div class="s">板块涨跌 '+(s.pct>=0?'+':'')+s.pct.toFixed(2)+'%　SPX贡献 '+(s.pts>=0?'+':'')+s.pts.toFixed(2)+'点　涨/跌 '+s.up+' / '+s.dn+'</div>'
+    +'<div style="margin-top:8px;color:#7d8b9d;font-size:11px">领涨贡献股</div>'
+    +up.map(n=>'<div class="row2"><span>'+n.ticker+'</span><span class="up">+'+(n.pct).toFixed(2)+'%　+'+n.pts.toFixed(2)+'点</span></div>').join('')
+    +'<div style="margin-top:8px;color:#7d8b9d;font-size:11px">领跌贡献股</div>'
+    +dn.map(n=>'<div class="row2"><span>'+n.ticker+'</span><span class="dn">'+n.pct.toFixed(2)+'%　'+n.pts.toFixed(2)+'点</span></div>').join('');
+}
+function render(d){
+  if(d.error){ $('load').textContent='加载失败：'+d.error; return; }
+  $('load').style.display='none'; $('app').style.display='block';
+  document.title = d.symbol+' 策略雷达';
+  // expiry options
+  const ex=$('exp'); const cur=ex.value||d.expiry;
+  ex.innerHTML=(d.exps||[]).map(e=>'<option '+(e===d.expiry?'selected':'')+'>'+e+'</option>').join('');
+  if(d.history_note && !$('tp').dataset.ok){
+    $('tp').innerHTML='<option value="latest">最新（'+d.session_date+' 收盘）</option>';
+    $('tp').dataset.ok=1;
+  }
+  const h=d.heur||{}, L=d.levels||{}, C=d.compass||{};
+  // pin
+  const pin=h.pin||0;
+  $('pinmk').style.left = ((pin+100)/200*150-1)+'px';
+  $('pinlbl').textContent = (pin>=0?'+':'')+Math.round(pin)+' '+ (h.pin_label||'');
+  // macro cards
+  $('macro').innerHTML =
+    `<div class="card macro"><h3>宏观走势判断 ${tip('', (d.tips&&d.tips.macro)||'')}</h3>
+      <div class="v">${h.macro||'—'} <span class="cy">${h.magnet_pct||'—'}%</span></div>
+      <div class="s">${h.energy_bias||''}　多空能量 ${h.energy||'—'}　主区间 ${px(h.zone&&h.zone[0])} – ${px(h.zone&&h.zone[1])}</div></div>
+     <div class="card"><h3>多空能量 ${tip('', '正GEX合计 / 负GEX合计，>1 多方偏强')}</h3><div class="v">${h.energy??'—'}</div><div class="s">${h.energy_bias||''}</div></div>
+     <div class="card"><h3>Dealer Pressure ${tip('', (d.tips&&d.tips.pressure)||'')}</h3><div class="v">${h.pressure??'—'}</div></div>
+     <div class="card"><h3>Dyn Gamma Pivot</h3><div class="v">${px(h.dyn_pivot,2)}</div></div>
+     <div class="card"><h3>尾盘10分钟 ${tip('', (d.tips&&d.tips.tail)||'')}</h3><div class="v" style="font-size:16px">${h.tail_text||'—'}</div><div class="s">锁价参考 ${px(h.tail_anchor)}</div></div>
+     <div class="card"><h3>Gamma 挤压点火 ${tip('', (d.tips&&d.tips.squeeze)||'')}</h3><div class="v" style="font-size:16px">${h.squeeze||'—'}</div><div class="s">强度 ${h.squeeze_pct||0}%</div></div>`;
+  $('stitle').textContent=d.symbol+' 收盘结构地图';
+  $('stmeta').innerHTML='到期 '+d.expiry+(d.approx?' <span class="badge">'+d.approx+'</span>':'')+'　最新 '+(d.asof_et||'');
+  const cls=x=>x==null?'—':px(x);
+  $('st6').innerHTML =
+    [['实时 Spot',cls(d.last)],['结构支撑',cls(L.support)],['结构阻力',cls(L.resist)],
+     ['收盘预测 Phase-A',cls(h.phase_a)+(h.phase_a_time?' @ '+h.phase_a_time:'')],
+     ['收盘预测 Phase-B',cls(h.phase_b)],
+     ['大概率收盘区', (h.close_zone?px(h.close_zone[0])+' – '+px(h.close_zone[1]):'—')]]
+    .map(a=>`<div class="card"><h3>${a[0]}</h3><div class="v" style="font-size:18px">${a[1]}</div></div>`).join('');
+  $('gexleg').innerHTML=`Zero Gamma ${cls(L.zero_gamma)}　Major + ${cls(L.major_pos)}　Major − ${cls(L.major_neg)}　GEX by Vol ${money(L.gex_vol_total)}　GEX by OI ${money(L.gex_oi_total)}`;
+  const mc=(d.maxchg||[]).map(r=>`<tr><td>${r.window}</td><td>${px(r.k)}</td><td>${r.gex==null?'—':money(r.gex)}</td></tr>`).join('');
+  $('gexTbl').innerHTML='<div style="color:#94a3b8;margin-bottom:3px">MAX CHANGE GEX</div><table>'+mc+'</table>';
+  drawSpotGex($('gexCv'), d, 'gex');
+  drawSpotGex($('flowCv'), d, 'flow');
+  drawTS($('tsCv'), d);
+  drawCand($('candCv'), d);
+  drawSmile($('smileCv'), d);
+  $('foot').innerHTML =
+    [['Zero Gamma',px(L.zero_gamma),'#fbbf24'],
+     ['Major Pos Gamma',px(L.major_pos),'#34d399'],
+     ['Major Neg Gamma',px(L.major_neg),'#fb7185'],
+     ['GEX by OI',money(L.gex_oi_total),'#e2e8f0'],
+     ['日内累计 GEX BY VOL',money(L.gex_vol_total),'#38bdf8'],
+     ['Net DEX',money(L.dex_total),'#fb7185']].map(a=>`<div><span>${a[0]}</span><b style="color:${a[2]}">${a[1]}</b></div>`).join('');
+  // compass
+  const chgCls=C.chg>=0?'up':'dn';
+  $('compHead').innerHTML = `<div class="card" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px">
+    <div><div class="s">最近交易日 · ${C.asof_date||''}　价格贡献估算</div>
+      <div class="v">${C.headline||'—'}</div><div class="s">${C.explain||''}</div></div>
+    <div><div class="s">SPX正式收盘</div><div class="v">${px(C.last)}</div><div class="s ${chgCls}">${C.chg>=0?'+':''}${px(C.chg)}（${C.pct>=0?'+':''}${(C.pct||0).toFixed(2)}%）</div></div>
+    <div><div class="s">短线风险</div><div class="v" style="font-size:18px">${C.risk||'—'}</div><div class="s">已结束交易日</div></div>
+    <div><div class="s">当时收盘参考</div><div class="v">${px(C.ref_close,0)}</div></div>
+  </div>`;
+  $('repair').innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
+    <div><b>${C.risk||''}</b><div class="s">${C.explain||''}</div></div>
+    <div class="s">近15分钟 <b class="${(C.m15||0)>=0?'up':'dn'}">${C.m15==null?'—':((C.m15>=0?'+':'')+C.m15+'点')}</b>
+    　近30分钟 <b class="${(C.m30||0)>=0?'up':'dn'}">${C.m30==null?'—':((C.m30>=0?'+':'')+C.m30+'点')}</b>
+    　距分钟高点 <b>${C.from_high==null?'—':C.from_high+'点'}</b>
+    　观察收复 <b>${px(C.reclaim)}</b></div></div>`;
+  const B=C.breadth||{};
+  $('bdrow').innerHTML = `M7 权重股拆解 <span class="badge">估算</span>　计入 ${B.n||0} 只　上涨 ${B.up||0} 只，${B.up_pts>=0?'+':''}${B.up_pts||0}点　下跌 ${B.dn||0} 只，${B.dn_pts||0}点`;
+  $('m7').innerHTML=(C.m7||[]).map(r=>`<div class="card ${r.pts>=0?'upcard':'dncard'}"><div class="nm">${r.ticker}</div>
+    <div class="v" style="font-size:18px">${r.pct>=0?'+':''}${r.pct.toFixed(2)}%</div>
+    <div class="s">${r.pts>=0?'+':''}${r.pts.toFixed(2)}点</div></div>`).join('');
+  $('m7foot').innerHTML=`M7 合计贡献 <b class="${(C.m7_pts||0)>=0?'up':'dn'}">${C.m7_pts>=0?'+':''}${C.m7_pts||0}点</b>　占已覆盖绝对贡献 ${C.m7_share||0}%`;
+  renderTree(d);
+  const drv=C.drivers||[];
+  const mx=Math.max(1,...drv.map(x=>Math.abs(x.pts)));
+  $('drivers').innerHTML='<h3>近期驱动 <span class="s">折算SPX贡献 · 较前收</span></h3>'
+    +drv.map(r=>`<div class="barline"><div class="nm">${r.ticker}<div class="s">${(r.name||'').slice(0,16)}</div></div>
+      <div class="track"><div class="fill" style="width:${Math.abs(r.pts)/mx*100}%;background:${r.pts>=0?'#34d399':'#fb7185'};margin-left:${r.pts>=0?0:'auto'}"></div></div>
+      <div style="width:64px;text-align:right" class="${r.pts>=0?'up':'dn'}">${r.pts>=0?'+':''}${r.pts.toFixed(2)}</div></div>`).join('')
+    +`<div class="note">估算合计 ${drv.reduce((s,r)=>s+r.pts,0).toFixed(2)}点　${B.note||''}</div>`;
+  const w=C.watch||[];
+  $('watch').innerHTML='<h3>接下来盯谁</h3>'
+    +w.map((r,i)=>`<div style="padding:8px 0;border-bottom:1px solid #1a2533">
+      <div style="display:flex;justify-content:space-between"><b>0${i+1}　${r.ticker}</b> <span>${px(r.last)}</span>
+        <span class="${r.push==='上推'?'up':'dn'}">${r.push}</span></div>
+      <div class="s">${r.approx_15m?'15分钟贡献（近似） ':'15分钟贡献 '}${r.c15>=0?'+':''}${r.c15}点
+      　观察上破 ${px(r.up)} / 下破 ${px(r.down)}
+      　较前收 ${r.pts>=0?'+':''}${r.pts.toFixed(2)}点</div>
+    </div>`).join('')
+    +`<div class="s" style="margin-top:8px">当前观察条件　<b>${C.condition||'—'}</b></div>
+      <div class="note">${(C.formulas&&C.formulas.watch)||''}</div>`;
+  const notes=[d.history_note, d.source&&d.source.gex, d.source&&d.source.flow, d.source&&d.source.weights, '自动刷新：常规时段约 12 秒。'].filter(Boolean);
+  $('notes').textContent=notes.join('  ·  ');
+  requestAnimationFrame(()=>{ drawSpotGex($('gexCv'), d, 'gex'); drawSpotGex($('flowCv'), d, 'flow'); drawTS($('tsCv'), d); drawCand($('candCv'), d); drawSmile($('smileCv'), d); renderTree(d); });
+}
+let DATA=null, loading=false;
+async function load(){
+  if(loading) return; loading=true;
+  try{
+    const exp=$('exp').value;
+    const u='/strategy/data?symbol='+encodeURIComponent(SYM)+(exp?('&expiry='+exp):'');
+    const d=await (await fetch(u,{cache:'no-store'})).json();
+    DATA=d; render(d);
+  }catch(e){ $('load').textContent='加载失败：'+e; }
+  finally{ loading=false; }
+}
+$('rf').onclick=load;
+$('exp').onchange=()=>{ $('load').style.display='block'; $('load').textContent='正在切换到期日…'; $('app').style.display='none'; load(); };
+window.addEventListener('resize', ()=>{ if(DATA) render(DATA); });
+load();
+setInterval(()=>{ const et=new Date().toLocaleString('en-US',{timeZone:'America/New_York',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}); load(); }, 12000);
+</script>
+</body>
+</html>
