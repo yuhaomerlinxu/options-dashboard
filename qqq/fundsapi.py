@@ -69,6 +69,7 @@ CUSIP_TO['464287200'] = 'SPY'
 CUSIP_TO['922908363'] = 'SPY'
 
 LOCK = threading.Lock()
+FETCH_LOCK = threading.Lock()
 STATE = {
     'filings': {},      # cik -> parsed pack
     'news': {'items':[], 'fetched':0, 'err':None},
@@ -320,8 +321,9 @@ def load_cache(cik):
     return None
 
 def save_cache(cik, pack):
+    os.makedirs(DAT, exist_ok=True)
     p = os.path.join(DAT, f'{cik}.json')
-    tmp = p + '.tmp'
+    tmp = p + '.tmp.' + str(os.getpid()) + '.' + str(threading.get_ident())
     with open(tmp,'w') as f:
         json.dump(pack, f, ensure_ascii=False, separators=(',',':'))
     os.replace(tmp, p)
@@ -332,6 +334,15 @@ def cache_age(cik):
     return time.time() - os.path.getmtime(p)
 
 def refresh_filings(force=False):
+    # only one fetch at a time (prewarm vs first HTTP request)
+    if FETCH_LOCK.locked() and not force:
+        with FETCH_LOCK:
+            return list(STATE.get('filing_errors') or [])
+    with FETCH_LOCK:
+        return _refresh_filings_inner(force)
+
+def _refresh_filings_inner(force=False):
+    os.makedirs(DAT, exist_ok=True)
     with LOCK:
         STATE['status'] = 'fetching_13f'
     # probe SEC once
@@ -367,6 +378,12 @@ def refresh_filings(force=False):
                     STATE['filings'][cik] = pack
         _sleep(WEB_SLEEP)
     with LOCK:
+        loaded = set(STATE['filings'].keys())
+        # don't surface cache-write races if the fund is already in memory
+        errors = [e for e in errors if not any(cik in loaded and cik in e for cik in loaded)]
+        # also drop raw filesystem rename noise when we have 19 packs
+        if len(STATE['filings']) >= len(FUNDS):
+            errors = [e for e in errors if 'No such file or directory' not in e and 'json.tmp' not in e]
         STATE['status'] = 'filings_ready'
         STATE['filing_errors'] = errors
         STATE['filings_fetched'] = _now_bj()
