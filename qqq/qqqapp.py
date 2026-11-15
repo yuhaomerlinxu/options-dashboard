@@ -164,6 +164,7 @@ EPAGE=open(os.path.join(D,'echo.html'),'rb').read()
 MPAGE=open(os.path.join(D,'mbot.html'),'rb').read()
 SPAGE=open(os.path.join(D,'strategy.html'),'rb').read()
 SFPAGE=open(os.path.join(D,'strategy_fly.html'),'rb').read()
+FPAGE=open(os.path.join(D,'funds.html'),'rb').read()
 class Mixin:
     def send(self,code,body,ct):
         self.send_response(code);self.send_header('Content-Type',ct);self.send_header('Cache-Control','no-store, no-cache, must-revalidate, max-age=0');self.send_header('Pragma','no-cache');self.send_header('Expires','0');self.end_headers();self.wfile.write(body)
@@ -175,6 +176,14 @@ class Mixin:
             except Exception:pass
     def _get(self):
         p=self.path.split('?')[0].rstrip('/')
+        if p=='/funds':self.send(200,FPAGE,'text/html; charset=utf-8');return
+        if p=='/funds/data':
+            try:
+                import fundsapi
+                r=fundsapi.payload()
+            except Exception as e:
+                r={'error':str(e)}
+            self.send(200,json.dumps(r,ensure_ascii=False,default=str).encode(),'application/json; charset=utf-8');return
         if p=='/strategy':self.send(200,SPAGE,'text/html; charset=utf-8');return
         if p=='/strategy/data':
             qs=parse_qs(urlparse(self.path).query)
@@ -259,6 +268,10 @@ def start():
         import strategyapi; strategyapi.prewarm()
     except Exception as e:
         print('strategy prewarm failed:',repr(e),flush=True)
+    try:
+        import fundsapi; fundsapi.prewarm()
+    except Exception as e:
+        print('funds prewarm failed:',repr(e),flush=True)
     threading.Thread(target=chartapi.prewarm,daemon=True).start()
     threading.Thread(target=spread_engine.prewarm,daemon=True).start()
     def mon():  # QQQ 1/2/3m signal monitor (was qqq_rt/run.sh watchdog)

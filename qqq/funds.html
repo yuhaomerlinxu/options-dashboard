@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>对冲基金仓位雷达</title>
+<style>
+:root{--bg:#070b14;--card:#101826;--card2:#0d1520;--line:#1c2a3d;--txt:#d7e0ee;--mut:#7d8b9d;--cyan:#5eead4;--cyan2:#22d3ee;--green:#34d399;--red:#fb7185;--amber:#fbbf24;--blue:#60a5fa;}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"PingFang SC","Noto Sans SC",system-ui,sans-serif;}
+a{color:#9cd5ff;text-decoration:none}
+#wrap{max-width:1180px;margin:0 auto;padding:12px 14px 88px;}
+header.hero{text-align:center;padding:8px 0 10px}
+header.hero h1{margin:0;font-size:28px;font-weight:750;letter-spacing:.08em;background:linear-gradient(180deg,#ecfeff,#5eead4 55%,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 10px rgba(94,234,212,.35))}
+#clocks{display:inline-flex;gap:16px;margin-top:8px;padding:6px 16px;border:1px solid var(--line);border-radius:10px;color:var(--mut);font-size:13px;background:#0a121c}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:12px 0}
+.bar button{background:#155e75;border:1px solid #1e738a;color:var(--txt);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
+.bar select{background:#0a121c;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px}
+.note{font-size:12px;color:#8b9aab;line-height:1.55;background:#0c1420;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:10px 0}
+.sec{margin:16px 0}
+.sec h2{margin:0 0 8px;font-size:20px;color:var(--cyan2);font-weight:700}
+.sec .sub{color:var(--mut);font-size:12px;margin:0 0 10px}
+.jud{display:grid;grid-template-columns:repeat(9,1fr);gap:8px}
+@media(max-width:1100px){.jud{grid-template-columns:repeat(5,1fr)}}
+@media(max-width:720px){.jud{grid-template-columns:repeat(3,1fr)}#wrap{padding:8px 8px 96px}header.hero h1{font-size:22px}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 10px 8px;min-width:0}
+.card h3{margin:0 0 4px;font-size:12px;color:var(--mut);font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.card .v{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.card .s{font-size:11px;color:var(--mut);margin-top:3px;line-height:1.4}
+.up{color:var(--green)} .dn{color:var(--red)} .mid{color:var(--amber)}
+.upcard{background:#0d261c;border-color:#14532d}
+.dncard{background:#2a1218;border-color:#7f1d1d}
+.midcard{background:#1a1710;border-color:#3f3a1e}
+.info{cursor:help;color:var(--cyan2);font-size:11px;border:1px solid #164e63;border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;position:relative}
+.info span{display:none;position:absolute;z-index:20;left:0;top:18px;width:260px;background:#0b1220;border:1px solid var(--line);color:#cbd5e1;padding:8px;border-radius:8px;font-size:11px;font-weight:400;line-height:1.45;box-shadow:0 8px 24px #000a;text-align:left}
+.info:hover span{display:block}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:7px 8px;border-bottom:1px solid #1a2533;text-align:left;vertical-align:top}
+th{color:var(--mut);font-weight:600;font-size:11px;background:#0c1420;position:sticky;top:0}
+tr.exp{cursor:pointer}
+tr.exp:hover{background:#121c28}
+.badge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:8px;background:#1e293b;color:#94a3b8;margin-left:4px}
+.badge.q3{background:#134e4a;color:#5eead4}
+.chbox{background:#0a121c;border:1px solid var(--line);border-radius:8px;margin:6px 0 12px;padding:8px 10px;font-size:12px}
+.heat{overflow-x:auto}
+.heat table{min-width:720px}
+.heat td,.heat th{text-align:center;padding:6px 4px;font-size:11px}
+.heat td.nm,.heat th.nm{text-align:left;white-space:nowrap}
+.cell{border-radius:6px;padding:5px 2px;min-width:64px}
+.cell.add{background:#0d261c;color:#6ee7b7}
+.cell.cut{background:#2a1218;color:#fda4af}
+.cell.flat{background:#1a1f2a;color:#94a3b8}
+.news{display:flex;flex-direction:column;gap:0}
+.ni{display:grid;grid-template-columns:86px 54px 1fr auto;gap:8px;align-items:start;padding:8px 4px;border-bottom:1px solid #1a2533;font-size:13px}
+.ni .t{color:var(--mut);font-size:11px}
+.ni .tag{font-size:11px;padding:1px 6px;border-radius:6px;background:#1e293b;color:#cbd5e1;text-align:center}
+.tag.增持,.tag.看多{background:#0d261c;color:#6ee7b7}
+.tag.减持,.tag.看空{background:#2a1218;color:#fda4af}
+.tag.宏观{background:#1e3a5f;color:#93c5fd}
+.tag.维权{background:#3b2f12;color:#fcd34d}
+#load{color:var(--mut);text-align:center;padding:40px 16px}
+nav.bot{position:fixed;bottom:6px;left:8px;z-index:99;font:12px sans-serif;background:#111a;padding:3px 8px;border-radius:6px;max-width:calc(100% - 16px);overflow:auto;white-space:nowrap}
+.muted{color:var(--mut)}
+.drv{font-size:11px;color:#9fb0c3;margin-top:4px;line-height:1.35}
+</style>
+</head>
+<body>
+<nav class="bot">
+<a href="/" style="color:#9cf;margin-right:10px">期权看板</a>
+<a href="/qqq" style="color:#9cf;margin-right:10px">QQQ实时</a>
+<a href="/qqq/chart?s=QQQ" style="color:#9cf;margin-right:10px">关键点位</a>
+<a href="/qqq/radar" style="color:#fbbf24;margin-right:10px">期权雷达</a>
+<a href="/echo?s=QQQ" style="color:#9cf;margin-right:10px">QQQ/SPX 5分</a>
+<a href="/mbot?s=SPX" style="color:#9cf;margin-right:10px">mBOT 5分</a>
+<a href="/strategy?symbol=QQQ" style="color:#9cf;margin-right:10px">策略雷达</a>
+<a href="/strategy/fly?symbol=SPX" style="color:#9cf;margin-right:10px">蝶式雷达</a>
+<a href="/funds" style="color:#fff">对冲基金</a>
+</nav>
+<div id="wrap">
+  <header class="hero">
+    <h1>对冲基金仓位雷达</h1>
+    <div id="clocks"><span id="bj">北京：—</span><span id="et">美东：—</span></div>
+  </header>
+  <div class="bar">
+    <button id="rf">刷新</button>
+    <span class="muted" id="meta">正在准备 13F 与新闻…</span>
+  </div>
+  <div id="load">正在拉取头部对冲基金的 13F 持仓和近 7 天新闻，第一次大约 1 分钟…</div>
+  <div id="app" style="display:none">
+    <div class="note" id="notes"></div>
+    <section class="sec" id="judge">
+      <h2>七巨头与指数判断 <span class="info">ℹ<span id="tip"></span></span></h2>
+      <p class="sub">综合各基金最近两个申报季的持仓变动，以及近 7 天新闻标签。不是实时仓位。</p>
+      <div class="jud" id="jud"></div>
+    </section>
+    <section class="sec" id="heatsec">
+      <h2>七巨头持仓矩阵</h2>
+      <p class="sub">格子为该基金对这只股票普通股的环比变动（市值，美元）。空格表示未持有。</p>
+      <div class="heat" id="heat"></div>
+    </section>
+    <section class="sec" id="funds">
+      <h2>基金仓位</h2>
+      <p class="sub">点击一行展开主要变动。市值来自 13F 申报（千美元口径已换算成美元）。</p>
+      <div style="overflow-x:auto">
+        <table id="ft"><thead></thead><tbody></tbody></table>
+      </div>
+    </section>
+    <section class="sec" id="newssec">
+      <h2>每日新闻</h2>
+      <p class="sub">Google News 与 CNBC 的公开 RSS，近 7 天，英文标题原文 + 规则中文标签（不是模型摘要）。时间是北京时间。</p>
+      <div class="bar" style="margin-top:0">
+        <label class="muted">基金</label>
+        <select id="nf"><option value="">全部基金</option></select>
+        <label class="muted">标的</label>
+        <select id="nt"><option value="">全部标的</option>
+          <option>AAPL</option><option>MSFT</option><option>NVDA</option><option>AMZN</option>
+          <option>GOOGL</option><option>META</option><option>TSLA</option><option>QQQ</option><option>SPY</option>
+        </select>
+      </div>
+      <div class="news" id="news"></div>
+    </section>
+    <section class="sec" id="recentsec">
+      <h2>最新申报</h2>
+      <p class="sub">这些基金最近的 13F 以及 13f.info 上列出的 13D/G。Form 4 因官方 EDGAR 接口在本服务器不可用，暂未系统收录。</p>
+      <div style="overflow-x:auto">
+        <table id="rt"><thead></thead><tbody></tbody></table>
+      </div>
+    </section>
+  </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+function tick(){
+  const now=new Date();
+  const f=(tz)=> new Intl.DateTimeFormat('sv-SE',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(now).replace('T',' ');
+  $('bj').textContent='北京：'+f('Asia/Shanghai');
+  $('et').textContent='美东：'+f('America/New_York');
+}
+tick(); setInterval(tick,1000);
+function mon(x,d){
+  if(x==null||!isFinite(x)) return '—';
+  const s=x<0?'−':(x>0&&d?'+':''); const a=Math.abs(x);
+  if(a>=1e12) return s+(a/1e12).toFixed(2)+'万亿';
+  if(a>=1e8) return s+(a/1e8).toFixed(2)+'亿';
+  if(a>=1e4) return s+(a/1e4).toFixed(1)+'万';
+  return s+a.toFixed(0);
+}
+function usd(x,sign){
+  if(x==null||!isFinite(x)) return '—';
+  const s=x<0?'−':(x>0&&sign?'+':''); const a=Math.abs(x);
+  if(a>=1e12) return s+'$'+(a/1e12).toFixed(2)+'T';
+  if(a>=1e9) return s+'$'+(a/1e9).toFixed(2)+'B';
+  if(a>=1e6) return s+'$'+(a/1e6).toFixed(2)+'M';
+  if(a>=1e3) return s+'$'+(a/1e3).toFixed(1)+'K';
+  return s+'$'+a.toFixed(0);
+}
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function actCls(a){ if(a==='增持'||a==='新建') return 'add'; if(a==='减持'||a==='清仓') return 'cut'; return 'flat'; }
+
+let DATA=null, loading=false;
+function render(d){
+  DATA=d;
+  $('load').style.display='none';
+  $('app').style.display='block';
+  const pc=d.period_counts||{};
+  const pcTxt=Object.keys(pc).sort().map(k=>k+' × '+pc[k]+' 家').join('，');
+  $('meta').textContent = '持仓刷新 '+(d.filings_fetched||'—')+'　新闻 '+(d.news_fetched||'—')+'　'+d.n_funds+' 家基金';
+  $('notes').innerHTML =
+    '最新报告期：<b>'+esc(d.period||'—')+'</b>（报告截止 '+esc(d.report_asof||'—')+'）。各期分布：'+esc(pcTxt)+'。<br>'+
+    esc(d.lag_note||'')+' '+(d.mix_note||'')+'<br>'+
+    esc(d.source_note||'')+
+    (d.errors&&d.errors.length? '<br>部分基金拉取失败：'+esc(d.errors.join('；')):'');
+  $('tip').textContent=d.formula||'';
+  $('jud').innerHTML=(d.judgments||[]).map(j=>{
+    const tone=j.tone==='up'?'upcard':(j.tone==='dn'?'dncard':'midcard');
+    const drv=(j.drivers||[]).slice(0,4).map(x=>esc(x.fund_zh||x.fund)+' '+esc(x.act)+(x.d_value? ' '+usd(x.d_value,1):'')).join('；');
+    const opt=(j.call_v||j.put_v)? ('Call '+usd(j.call_v)+' / Put '+usd(j.put_v)) : '期权仓较少或无';
+    return `<div class="card ${tone}">
+      <h3>${esc(j.symbol)}${j.kind==='idx'?' <span class="badge">指数</span>':''}${j.thin?' <span class="badge">样本偏少</span>':''}</h3>
+      <div class="v ${j.tone}">${esc(j.label)} <span style="font-size:16px">${j.score}</span></div>
+      <div class="s">增持 ${j.n_add}　减持 ${j.n_cut}　新建 ${j.n_new}　清仓 ${j.n_exit}<br>
+      普通股市值变动 ${usd(j.d_value,1)}　新闻 多${j.news_bull}/空${j.news_bear}<br>${opt}</div>
+      <div class="drv">${drv||'暂无显著变动'}</div>
+    </div>`;
+  }).join('');
+
+  const m7=['AAPL','MSFT','NVDA','AMZN','GOOGL','META','TSLA'];
+  let ht=`<table><thead><tr><th class="nm">基金 / 报告期</th>${m7.map(t=>'<th>'+t+'</th>').join('')}</tr></thead><tbody>`;
+  (d.heatmap||[]).forEach(r=>{
+    ht+=`<tr><td class="nm">${esc(r.name_zh||r.name)} <span class="badge ${r.period==='2026-Q3'?'q3':''}">${esc(r.period||'')}</span></td>`;
+    m7.forEach(t=>{
+      const c=r.cells[t];
+      if(!c){ ht+='<td class="muted">—</td>'; return; }
+      ht+=`<td><div class="cell ${actCls(c.act)}" title="${esc(c.act)} 股数变动 ${c.d_shares??'—'}">${esc(c.act)}<br>${usd(c.d_value,1)}</div></td>`;
+    });
+    ht+='</tr>';
+  });
+  ht+='</tbody></table>';
+  $('heat').innerHTML=ht;
+
+  const thead=`<tr><th>基金</th><th>报告期</th><th>申报日</th><th>总市值</th><th>持仓数</th><th>前几大持仓</th><th>七巨头 / 指数</th></tr>`;
+  $('ft').querySelector('thead').innerHTML=thead;
+  const tb=$('ft').querySelector('tbody');
+  tb.innerHTML='';
+  (d.funds||[]).forEach((f,i)=>{
+    const top=(f.top||[]).slice(0,4).map(x=>esc(x.sym||'')+' '+usd(x.value)).join('、');
+    const ex=f.expo||{};
+    const exs=['AAPL','MSFT','NVDA','AMZN','GOOGL','META','TSLA','QQQ','SPY'].filter(t=>ex[t]).map(t=>{
+      const e=ex[t]; return t+' '+(e.act||'')+' '+usd(e.d_value,1);
+    }).join('；');
+    const tr=document.createElement('tr');
+    tr.className='exp';
+    tr.innerHTML=`<td>${esc(f.name)} <div class="muted">${esc(f.name_zh||'')}</div></td>
+      <td>${esc(f.period||'—')}<div class="muted">截至 ${esc(f.asof||'—')}</div></td>
+      <td>${esc(f.filed||'—')}${f.sec_url? '<div><a href="'+esc(f.sec_url)+'" target="_blank" rel="noopener">SEC 原件</a></div>':''}</td>
+      <td>${usd(f.total_value)}</td>
+      <td>${f.n||'—'}</td>
+      <td>${top||'—'}</td>
+      <td>${exs||'—'}</td>`;
+    const det=document.createElement('tr');
+    det.style.display='none';
+    const ch=(f.changes||[]).slice(0,25).map(c=>
+      `<div>${esc(c.act)} ${esc(c.sym||'')} ${esc(c.name||'')} ${c.opt? ('['+esc(c.opt)+']'):''}　${usd(c.d_value,1)}　股数 ${c.d_shares??'—'}</div>`
+    ).join('') || '<div class="muted">没有可对比的上一季，或变动已被过滤。</div>';
+    det.innerHTML=`<td colspan="7"><div class="chbox">环比对比 ${esc(f.prev_period||'上一季')} → ${esc(f.period||'本季')}，共 ${f.n_changes||0} 条变动，下列按市值变动绝对值排列：${ch}</div></td>`;
+    tr.onclick=()=>{ det.style.display = det.style.display==='none'?'table-row':'none'; };
+    tb.appendChild(tr); tb.appendChild(det);
+  });
+
+  const nf=$('nf');
+  const cur=nf.value;
+  nf.innerHTML='<option value="">全部基金</option>'+(d.funds||[]).map(f=>`<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('');
+  if(cur) nf.value=cur;
+  renderNews();
+
+  const rthead=`<tr><th>类型</th><th>基金</th><th>申报日</th><th>说明</th><th>链接</th></tr>`;
+  $('rt').querySelector('thead').innerHTML=rthead;
+  $('rt').querySelector('tbody').innerHTML=(d.recent||[]).map(r=>
+    `<tr><td>${esc(r.form||r.kind)}</td><td>${esc(r.fund_zh||r.fund)}</td><td>${esc(r.filed||'—')}</td>
+     <td>${esc(r.period||r.title||'')}${r.total_value? '　'+usd(r.total_value):''}</td>
+     <td>${r.url? '<a href="'+esc(r.url)+'" target="_blank" rel="noopener">打开</a>':'—'}</td></tr>`
+  ).join('');
+}
+function renderNews(){
+  if(!DATA) return;
+  const fid=$('nf').value, tk=$('nt').value;
+  const rows=(DATA.news||[]).filter(n=>{
+    if(fid && !(n.funds||[]).includes(fid)) return false;
+    if(tk && !(n.tickers||[]).includes(tk)) return false;
+    return true;
+  }).slice(0,80);
+  $('news').innerHTML=rows.map(n=>
+    `<div class="ni"><div class="t">${esc(n.time_bj||'—')}</div>
+     <div class="tag ${esc(n.tag)}">${esc(n.tag)}</div>
+     <div><a href="${esc(n.link)}" target="_blank" rel="noopener">${esc(n.title)}</a>
+       <div class="muted">${esc(n.source||'')} ${(n.tickers||[]).join(' ')||''} ${(n.funds||[]).join(' ')}</div></div>
+     <div></div></div>`
+  ).join('') || '<div class="muted" style="padding:12px">没有符合筛选的新闻。</div>';
+}
+$('nf').onchange=$('nt').onchange=renderNews;
+
+function load(){
+  if(loading) return;
+  loading=true;
+  $('load').style.display='block';
+  $('load').textContent='正在拉取 13F 与新闻，请稍候…';
+  fetch('/funds/data',{cache:'no-store'}).then(r=>r.json()).then(d=>{
+    if(d.error){ $('load').textContent='加载失败：'+d.error; loading=false; return; }
+    render(d); loading=false;
+  }).catch(e=>{ $('load').textContent='加载失败：'+e; loading=false; });
+}
+$('rf').onclick=()=>{ DATA=null; load(); };
+load();
+</script>
+</body>
+</html>
