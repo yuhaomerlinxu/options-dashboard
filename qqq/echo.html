@@ -96,11 +96,20 @@ function realIdx(t){
   }
   return best;
 }
+function firstOfDay(i){
+  const k=etParts(real[i]).dateKey;
+  let f=i;
+  while(f>0 && etParts(real[f-1]).dateKey===k) f--;
+  return f;
+}
 function fmtTick(t){
   const i=realIdx(t);
   const r=i>=0?real[i]:t;
   const prev=i>0?real[i-1]:null;
   const a=etParts(r);
+  // First hour of a session: prefer the date label (Nov 12) like the reference,
+  // even if Lightweight Charts placed the tick at 10 AM instead of 9:30.
+  if(i>=0 && i-firstOfDay(i)<12) return a.mon+' '+a.day;
   if(prev && etParts(prev).dateKey!==a.dateKey) return a.mon+' '+a.day;
   return a.hour; // "11 AM", "12 PM"
 }
