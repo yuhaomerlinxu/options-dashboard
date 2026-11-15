@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mBOT 5m</title>
+<style>
+html,body{margin:0;background:#000;color:#d8d8d8;font-family:-apple-system,"PingFang SC",system-ui,sans-serif;height:100%;overflow:hidden}
+a{color:#9cf;text-decoration:none}
+#wrap{display:flex;flex-direction:column;height:100%;padding:14px 18px 34px;box-sizing:border-box;position:relative}
+#hdr{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:6px;flex-shrink:0}
+#left{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+#sym{font-size:28px;font-weight:700;letter-spacing:-0.03em}
+#meta{color:#8a8a8a;font-size:15px}
+#px{font-size:28px;font-weight:650;letter-spacing:-0.03em}
+#chg{font-size:12px;font-weight:600;padding:3px 8px;border-radius:999px;margin-left:4px}
+#chg.dn{background:#3a1216;color:#f07178}#chg.up{background:#10291c;color:#3ecf8e}
+#asof{color:#8a8a8a;font-size:14px;white-space:nowrap}
+#tog{display:flex;gap:6px;margin-left:6px}
+#tog a{padding:3px 10px;border-radius:999px;font-size:13px;border:1px solid #222;color:#aaa}
+#tog a.on{background:#161616;color:#fff;border-color:#333}
+#leg{font-size:11px;color:#7a7a7a;margin:0 0 6px;flex-shrink:0}
+#chart{flex:1.7;min-height:260px;position:relative}
+#hist{height:168px;position:relative;flex-shrink:0}
+#hlab{position:absolute;left:8px;top:4px;z-index:4;font-size:11px;color:#7a7a7a;pointer-events:none}
+#note{font-size:10px;color:#555;margin-top:6px;flex-shrink:0;line-height:1.4;max-height:42px;overflow:hidden}
+#panel{position:absolute;left:10px;bottom:52px;z-index:8;background:rgba(18,20,26,.92);border:1px solid #2a2e36;border-radius:4px;padding:8px 10px 7px;min-width:230px;pointer-events:none;box-shadow:0 2px 12px #000a}
+#panel .ph{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;font-size:11px;letter-spacing:.04em}
+#panel .ph b{color:#c9c9c9;font-weight:700}
+#panel .prod{color:#7d8b9a;font-size:9px;letter-spacing:.12em}
+#panel table{border-collapse:collapse;width:100%}
+#panel td{font-size:11px;padding:1px 0;line-height:1.35}
+#panel td.k{color:#8b8b8b;padding-right:12px;white-space:nowrap;width:78px}
+#panel td.v{color:#d0d0d0}
+#panel td.v.bull{color:#3ecf8e}
+#panel td.v.bear{color:#e14ec4}
+#panel td.v.wait{color:#f0c14b}
+#panel td.v.neutral{color:#c8c8c8}
+.err{color:#f07178;padding:20px}
+</style>
+</head>
+<body>
+<nav style="position:fixed;bottom:6px;left:8px;z-index:99;font:12px sans-serif;background:#111a;padding:3px 8px;border-radius:6px">
+<a href="/" style="color:#9cf;margin-right:10px">期权看板</a>
+<a href="/qqq" style="color:#9cf;margin-right:10px">QQQ实时</a>
+<a href="/qqq/chart?s=QQQ" style="color:#9cf;margin-right:10px">关键点位</a>
+<a href="/qqq/radar" style="color:#fbbf24;margin-right:10px">期权雷达</a>
+<a href="/echo?s=QQQ" style="color:#9cf;margin-right:10px">QQQ/SPX 5分</a>
+<a href="/mbot?s=SPX" style="color:#fff">mBOT 5分</a>
+</nav>
+<div id="wrap">
+  <div id="hdr">
+    <div id="left">
+      <span id="sym">—</span>
+      <span id="meta">5m</span>
+      <span id="px">—</span>
+      <span id="chg" class="dn">—</span>
+      <span id="tog">
+        <a id="ts" href="/mbot?s=SPX">SPX</a>
+        <a id="tq" href="/mbot?s=QQQ">QQQ</a>
+      </span>
+    </div>
+    <div id="asof">—</div>
+  </div>
+  <div id="leg">mBOT 3.00 · Supertrend trail · session High/Low</div>
+  <div id="chart"></div>
+  <div id="hist"><div id="hlab">Vol Delta</div></div>
+  <div id="note"></div>
+  <div id="panel">
+    <div class="ph"><b>mBOT 3.00</b> <span class="prod">PRODUCTION</span></div>
+    <table id="ptbl"></table>
+  </div>
+</div>
+<script src="/qqq/static/lwc.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const SYM = (new URLSearchParams(location.search).get('s') || 'SPX').toUpperCase() === 'QQQ' ? 'QQQ' : 'SPX';
+$('tq').className = SYM==='QQQ' ? 'on' : '';
+$('ts').className = SYM==='SPX' ? 'on' : '';
+document.title = SYM + ' mBOT 5m';
+
+function etParts(ts){
+  const d = new Date(ts*1000);
+  const fmt = (opt) => new Intl.DateTimeFormat('en-US', Object.assign({timeZone:'America/New_York'}, opt)).format(d);
+  return {
+    mon: fmt({month:'short'}),
+    day: fmt({day:'numeric'}),
+    hour: fmt({hour:'numeric', hour12:true}),
+    hm: fmt({hour:'numeric', minute:'2-digit', hour12:true}),
+    dateKey: fmt({year:'numeric', month:'2-digit', day:'2-digit'})
+  };
+}
+function realIdx(t, times){
+  if(t && typeof t==='object'){
+    if(typeof t.timestamp==='number') t=t.timestamp;
+    else return -1;
+  }
+  t=Number(t);
+  if(!times.length || !isFinite(t)) return -1;
+  const i=times.indexOf(t);
+  if(i>=0) return i;
+  let best=0, bd=Infinity;
+  for(let k=0;k<times.length;k++){
+    const d=Math.abs(times[k]-t);
+    if(d<bd){bd=d;best=k;}
+  }
+  return best;
+}
+
+let ch, gs, ts, ms, trail, last, hc, hs, times=[], lines=[];
+function fmtTick(t){
+  const i=realIdx(t, times);
+  const r=i>=0?times[i]:t;
+  const prev=i>0?times[i-1]:null;
+  const a=etParts(r);
+  if(i>=0){
+    // first ~80 min of a session, or a date change vs previous bar
+    let f=i;
+    while(f>0 && etParts(times[f-1]).dateKey===a.dateKey) f--;
+    if(i-f<=16) return a.mon+' '+a.day;
+  }
+  if(prev && etParts(prev).dateKey!==a.dateKey) return a.mon+' '+a.day;
+  return a.hour;
+}
+function fmtCross(t){
+  const i=realIdx(t, times);
+  const p=etParts(i>=0?times[i]:t);
+  return p.mon+' '+p.day+'  '+p.hm+' ET';
+}
+
+function init(){
+  const common = {
+    autoSize:true,
+    layout:{background:{color:'#000'}, textColor:'#6e6e6e', fontSize:11},
+    grid:{vertLines:{color:'#141414'}, horzLines:{color:'#141414'}},
+    rightPriceScale:{borderVisible:false, scaleMargins:{top:0.04, bottom:0.06}, minimumWidth:72},
+    timeScale:{borderVisible:false, timeVisible:true, secondsVisible:false, rightOffset:6, tickMarkFormatter:fmtTick},
+    crosshair:{vertLine:{color:'#333', width:1, style:0, labelBackgroundColor:'#222'}, horzLine:{color:'#333', width:1, style:0, labelBackgroundColor:'#222'}},
+    localization:{timeFormatter:fmtCross, locale:'en-US'},
+  };
+  ch = LightweightCharts.createChart($('chart'), common);
+  const candle = (up, dn) => ch.addCandlestickSeries({
+    upColor:up, downColor:dn, borderVisible:false,
+    wickUpColor:up, wickDownColor:dn,
+    lastValueVisible:false, priceLineVisible:false
+  });
+  gs = candle('#6a6a6a','#6a6a6a');
+  ts = candle('#2ee6d6','#2ee6d6');
+  ms = candle('#e14ec4','#e14ec4');
+  trail = ch.addLineSeries({
+    color:'#e8b84a', lineWidth:1, lineStyle:1,
+    priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false
+  });
+  last = ch.addLineSeries({
+    color:'#e8c44d', lineWidth:0, lastValueVisible:true, priceLineVisible:false,
+    crosshairMarkerVisible:false
+  });
+  hc = LightweightCharts.createChart($('hist'), Object.assign({}, common, {
+    handleScroll:false, handleScale:false,
+    timeScale:{visible:false, borderVisible:false, rightOffset:6, tickMarkFormatter:fmtTick},
+    rightPriceScale:Object.assign({}, common.rightPriceScale, {scaleMargins:{top:0.12,bottom:0.08}, minimumWidth:72}),
+    grid:{vertLines:{color:'#141414'}, horzLines:{color:'#1a1a1a'}},
+  }));
+  hs = hc.addHistogramSeries({priceLineVisible:false, lastValueVisible:true});
+  ch.timeScale().subscribeVisibleLogicalRangeChange(r=>{ if(r) hc.timeScale().setVisibleLogicalRange(r); });
+}
+
+function setCandles(bars, colors){
+  const g=[], t=[], m=[], ln=[], tr=[];
+  bars.forEach((b,i)=>{
+    const item={time:b.t, open:b.o, high:b.h, low:b.l, close:b.c};
+    const c=colors[i]||'gray';
+    if(c==='teal'){ t.push(item); g.push({time:b.t}); m.push({time:b.t}); }
+    else if(c==='mag'){ m.push(item); g.push({time:b.t}); t.push({time:b.t}); }
+    else { g.push(item); t.push({time:b.t}); m.push({time:b.t}); }
+    ln.push({time:b.t, value:b.c});
+  });
+  gs.setData(g); ts.setData(t); ms.setData(m);
+  last.setData(ln);
+}
+
+function applyLevels(L, lastPx){
+  lines.forEach(x=>{ try{ gs.removePriceLine(x); }catch(e){} });
+  lines=[];
+  const add=(price,color,title,style,width)=>{
+    if(price==null) return;
+    lines.push(gs.createPriceLine({
+      price:price, color:color, lineStyle:style||0, lineWidth:width||1,
+      title:title||'', axisLabelVisible:true
+    }));
+  };
+  add(L.high, '#8aa4c4', 'High', 0, 1);
+  add(L.low, '#6a8caf', 'Low', 0, 1);
+  add(L.prev_sess, '#c4453c', '', 2, 1);
+  add(L.sess_low, '#3d6fb8', '', 0, 1);
+  add(L.sess_mid, '#444', '', 2, 1);
+  add(L.vwap, '#555', '', 2, 1);
+}
+
+function applyMarks(marks){
+  const rows=(marks||[]).map(m=>({
+    time:m.t,
+    position: m.pos==='below' ? 'belowBar' : 'aboveBar',
+    color: m.color || '#f0c14b',
+    shape: m.pos==='below' ? 'arrowUp' : 'arrowDown',
+    text: m.kind+'  '+Number(m.price).toFixed(2)
+  }));
+  // Attach to the last-price series so every timestamp exists.
+  if(last.setMarkers) last.setMarkers(rows);
+  else if(last.createSeriesMarkers) {}
+}
+
+function render(d){
+  if(d.error){ $('note').textContent='加载失败: '+d.error; return; }
+  $('sym').textContent=d.symbol;
+  $('px').textContent=d.last==null?'—':'$'+Number(d.last).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const pct=d.change_pct, up=pct>=0;
+  $('chg').className=up?'up':'dn';
+  $('chg').textContent=(up?'+':'')+Number(pct).toFixed(2)+'%';
+  $('asof').textContent=d.asof_et||'';
+  times=(d.bars||[]).map(b=>b.t);
+  setCandles(d.bars, d.colors);
+  trail.setData((d.bars||[]).map((b,i)=>d.trail[i]==null?{time:b.t}:{time:b.t, value:d.trail[i]}));
+  applyLevels(d.levels||{}, d.last);
+  applyMarks(d.marks||[]);
+  const hist=(d.delta||[]).map(x=>({
+    time:x.t, value:x.v,
+    color: x.div ? '#f0c14b' : (x.v>=0 ? '#2ee6d6' : '#e14ec4')
+  }));
+  hs.setData(hist);
+  const lastD=d.delta && d.delta.length ? d.delta[d.delta.length-1] : null;
+  const day= (d.delta||[]).reduce((s,x,i,arr)=>{
+    // last session only
+    return s;
+  },0);
+  const lastDay = times.length ? etParts(times[times.length-1]).dateKey : '';
+  const daySum=(d.delta||[]).reduce((s,x,i)=> etParts(times[i]).dateKey===lastDay ? s+x.v : s, 0);
+  const fmt=v=>{
+    const a=Math.abs(v), s=v<0?'−':'+';
+    if(a>=1e6) return s+(a/1e6).toFixed(2)+'M';
+    if(a>=1e3) return s+(a/1e3).toFixed(0)+'K';
+    return s+a.toFixed(0);
+  };
+  $('hlab').innerHTML='Vol Delta  <b style="color:#ccc">'+(lastD?fmt(lastD.v):'—')+'</b>  &nbsp; Day <b style="color:#ccc">'+(fmt(daySum))+'</b>';
+  const rows=(d.status && d.status.rows)||[];
+  $('ptbl').innerHTML=rows.map(r=>'<tr><td class="k">'+r.k+'</td><td class="v '+(r.tone||'')+'">'+r.v+'</td></tr>').join('');
+  $('leg').textContent='mBOT 3.00 · Supertrend ATR10×3.0 trail · High/Low of loaded range · red dashed = prior session close · blue = session low · gray = VWAP / mid';
+  $('note').textContent=[d.rules, d.delta_note, d.exp && d.exp.source ? ('EXP: '+d.exp.source) : ''].filter(Boolean).join('  ·  ');
+  ch.timeScale().fitContent();
+  hc.timeScale().fitContent();
+}
+
+async function load(){
+  try{
+    const d=await (await fetch('/mbot/data?s='+SYM,{cache:'no-store'})).json();
+    render(d);
+    return d;
+  }catch(e){ $('note').textContent='加载失败: '+e; }
+}
+init();
+load();
+setInterval(()=>{ if(!window._ld){ window._ld=1; Promise.resolve(load()).finally(()=>window._ld=0);} }, 20000);
+</script>
+</body>
+</html>
