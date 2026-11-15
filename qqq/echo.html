@@ -131,7 +131,7 @@ function init(){
   new ResizeObserver(()=>drawCloud()).observe($('chart'));
 
   const sub = (el, margins) => LightweightCharts.createChart(el, Object.assign({}, common, {
-    localization:loc,
+    localization:{timeFormatter:fmtCross, locale:'en-US'},
     handleScroll:false, handleScale:false,
     timeScale:{visible:false, borderVisible:false, rightOffset:4},
     rightPriceScale:Object.assign({}, common.rightPriceScale, {scaleMargins:margins, minimumWidth:60}),
