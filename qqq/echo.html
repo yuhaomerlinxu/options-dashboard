@@ -109,7 +109,7 @@ function fmtTick(t){
   const a=etParts(r);
   // First hour of a session: prefer the date label (Nov 12) like the reference,
   // even if Lightweight Charts placed the tick at 10 AM instead of 9:30.
-  if(i>=0 && i-firstOfDay(i)<12) return a.mon+' '+a.day;
+  if(i>=0 && i-firstOfDay(i)<=16) return a.mon+' '+a.day; // first ~80 min of RTH
   if(prev && etParts(prev).dateKey!==a.dateKey) return a.mon+' '+a.day;
   return a.hour; // "11 AM", "12 PM"
 }
