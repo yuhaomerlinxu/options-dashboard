@@ -900,9 +900,12 @@ def _sdk_option_quotes(under, expiry, spot, window=0.10):
 def _cli_or_sdk(cli_fn, sdk_fn):
     try:
         return cli_fn()
-    except Exception:
-        with _quiet_stdio():
-            return sdk_fn()
+    except Exception as cli_err:
+        try:
+            with _quiet_stdio():
+                return sdk_fn()
+        except Exception:
+            raise cli_err
 
 
 def close_estimate(sym='SPX', expiry=None):
@@ -1121,26 +1124,36 @@ def payload(sym='QQQ', expiry=None):
 def fly_payload(sym='SPX', expiry=None, center=None, wing=None, typ='auto'):
     spec = resolve(sym)
     rth = _rth_now()
-    q = E._cached(('st-q', spec['bar']), _ttl(5, 60), lambda: E._quote(spec['bar']))
-    bars = E._cached(('st-1m', spec['bar']), _ttl(8, 120), lambda: _bars(spec['bar'], '1m', 500, 1))
+    q = _cli_or_sdk(
+        lambda: E._cached(('st-q', spec['bar']), _ttl(5, 60), lambda: E._quote(spec['bar'])),
+        lambda: _sdk_quote(spec['bar']))
+    bars = _cli_or_sdk(
+        lambda: E._cached(('st-1m', spec['bar']), _ttl(8, 120), lambda: _bars(spec['bar'], '1m', 500, 1)),
+        lambda: _sdk_bars(spec['bar']))
     last = bars[-1]['c'] if bars else q['last']
     if rth:
         last = q['last']
     if spec['scale'] == 'spy':
-        spy = E._cached('st-q-spy', _ttl(5, 60), lambda: E._quote('SPY.US'))
+        spy = _cli_or_sdk(
+            lambda: E._cached('st-q-spy', _ttl(5, 60), lambda: E._quote('SPY.US')),
+            lambda: _sdk_quote('SPY.US'))
         scale = last / spy['last']
         spot_opt = spy['last']
     else:
         scale, spot_opt = 1.0, last
-    exps = E._cached(('st-exps', spec['opt']), _ttl(60, 1800), lambda: _exps(spec['opt']))
+    exps = _cli_or_sdk(
+        lambda: E._cached(('st-exps', spec['opt']), _ttl(60, 1800), lambda: _exps(spec['opt'])),
+        lambda: _sdk_exps(spec['opt']))
     if not expiry or expiry not in exps:
         expiry = exps[0] if exps else None
     if not expiry:
         return {'error': '没有可用的未到期期权', 'symbol': spec['label']}
     # wider window for 50-pt (SPX) / 10-pt (QQQ) wings
     window = 0.08 if spec['id'] != 'SPX' else 0.06
-    rows, ks = E._cached(('st-opt', spec['id'], expiry), _ttl(60, 1800),
-                         lambda: _option_quotes(spec['opt'], expiry, spot_opt, max(window, 0.10)))
+    rows, ks = _cli_or_sdk(
+        lambda: E._cached(('st-opt', spec['id'], expiry), _ttl(60, 1800),
+                          lambda: _option_quotes(spec['opt'], expiry, spot_opt, max(window, 0.10))),
+        lambda: _sdk_option_quotes(spec['opt'], expiry, spot_opt, max(window, 0.10)))
     by, nused, T = _greeks(rows, spot_opt, expiry, scale)
     # map scaled strike -> rec
     # fly priced on RAW option last prices, then dollar cost × scale (SPY lot × ratio ≈ SPX dollars)
