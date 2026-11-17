@@ -1,9 +1,406 @@
 #!/usr/bin/env python3
-"""Read-only Longbridge CLI wrapper. Only market-data subcommands pass; everything else (orders, trades, alerts, auth...) is refused."""
-import os, sys
+"""Read-only Longbridge market-data wrapper.
+
+Tries the official Longbridge CLI first. If it is missing or its refresh
+token has expired, falls back to the official Python SDK using
+LONGPORT_APP_KEY / LONGPORT_APP_SECRET / LONGPORT_ACCESS_TOKEN
+(Config.from_apikey_env). JSON output matches the CLI --format json shape
+so /qqq, /echo, /mbot, /strategy and /strategy/fly keep working.
+
+Only market-data subcommands are allowed. Orders, trades, alerts and auth
+are refused. This script never prints credentials.
+"""
+from __future__ import annotations
+import json, os, sys, subprocess
+from datetime import datetime, date, timezone, timedelta
+
 REAL = os.environ.get("LONGBRIDGE_BIN", "/usr/local/bin/longbridge")
-ALLOWED = (("quote",), ("option", "chain"), ("option", "quote"), ("kline",), ("finance-calendar", "report"), ("trading", "days"), ("depth",))
-a = sys.argv[1:]
-if not a or not any(tuple(a[:len(x)]) == x for x in ALLOWED) or (a[0] == "kline" and len(a) > 1 and a[1] not in ("history",) and a[1].startswith("-")):
-    sys.stderr.write("lbsafe: blocked non-market-data command %r\n" % a[:2]); sys.exit(13)
-os.execv(REAL, [REAL] + a)
+ALLOWED = (
+    ("quote",),
+    ("option", "chain"),
+    ("option", "quote"),
+    ("kline",),
+    ("finance-calendar", "report"),
+    ("trading", "days"),
+    ("depth",),
+)
+
+
+def _blocked(a):
+    if not a or not any(tuple(a[: len(x)]) == x for x in ALLOWED):
+        return True
+    # original guard: reject kline flags-as-symbol
+    if a[0] == "kline" and len(a) > 1 and a[1] not in ("history",) and a[1].startswith("-"):
+        return True
+    return False
+
+
+def _parse(argv):
+    args, opts, i = [], {}, 0
+    while i < len(argv):
+        a = argv[i]
+        if a in ("--format", "--period", "--count", "--adjust", "--session",
+                 "--date", "--start", "--end", "--market", "--lang", "--symbol"):
+            opts[a[2:]] = argv[i + 1] if i + 1 < len(argv) else ""
+            i += 2
+            continue
+        if a.startswith("--") and "=" in a:
+            k, v = a[2:].split("=", 1)
+            opts[k] = v
+            i += 1
+            continue
+        if a in ("-v", "--verbose", "--schema"):
+            i += 1
+            continue
+        args.append(a)
+        i += 1
+    return args, opts
+
+
+class _Quiet:
+    def __enter__(self):
+        self._null = os.open(os.devnull, os.O_WRONLY)
+        self._o1, self._o2 = os.dup(1), os.dup(2)
+        os.dup2(self._null, 1)
+        os.dup2(self._null, 2)
+        return self
+
+    def __exit__(self, *exc):
+        os.dup2(self._o1, 1)
+        os.dup2(self._o2, 2)
+        os.close(self._o1)
+        os.close(self._o2)
+        os.close(self._null)
+        return False
+
+
+_CTX = None
+
+
+def _ctx():
+    global _CTX
+    if _CTX is None:
+        from longport.openapi import Config, QuoteContext
+        with _Quiet():
+            _CTX = QuoteContext(Config.from_apikey_env())
+    return _CTX
+
+
+def _iso(ts):
+    if ts is None:
+        return None
+    if hasattr(ts, "timestamp"):
+        # naive datetimes from the SDK are local; .timestamp() handles that
+        return datetime.fromtimestamp(ts.timestamp(), timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    s = str(ts).replace("+00:00", "Z")
+    return s
+
+
+def _num(x):
+    if x is None:
+        return None
+    try:
+        return float(x)
+    except (TypeError, ValueError):
+        return str(x)
+
+
+def _ext_quote(ext):
+    if ext is None:
+        return None
+    return {
+        "last": _num(getattr(ext, "last_done", None)),
+        "prev_close": _num(getattr(ext, "prev_close", None)),
+        "high": _num(getattr(ext, "high", None)),
+        "low": _num(getattr(ext, "low", None)),
+        "volume": _num(getattr(ext, "volume", None)),
+        "turnover": _num(getattr(ext, "turnover", None)),
+        "timestamp": _iso(getattr(ext, "timestamp", None)),
+    }
+
+
+def _period(name):
+    from longport.openapi import Period
+    m = {
+        "1m": Period.Min_1, "minute": Period.Min_1,
+        "2m": Period.Min_2, "3m": Period.Min_3,
+        "5m": Period.Min_5, "10m": Period.Min_10,
+        "15m": Period.Min_15, "20m": Period.Min_20,
+        "30m": Period.Min_30, "45m": Period.Min_45,
+        "1h": Period.Min_60, "hour": Period.Min_60, "60m": Period.Min_60,
+        "2h": Period.Min_120, "3h": Period.Min_180, "4h": Period.Min_240,
+        "day": Period.Day, "d": Period.Day, "1d": Period.Day,
+        "week": Period.Week, "w": Period.Week,
+        "month": Period.Month, "m": Period.Month, "1mo": Period.Month,
+        "year": Period.Year, "y": Period.Year,
+    }
+    return m.get((name or "day").lower(), Period.Day)
+
+
+def _adjust(name):
+    from longport.openapi import AdjustType
+    if (name or "none").lower() in ("forward", "forward_adjust", "forwardadjust"):
+        return AdjustType.ForwardAdjust
+    return AdjustType.NoAdjust
+
+
+def _bar(b):
+    sess = str(getattr(b, "trade_session", "") or "Intraday")
+    if "Pre" in sess:
+        session = "Pre"
+    elif "Post" in sess:
+        session = "Post"
+    elif "Overnight" in sess:
+        session = "Overnight"
+    else:
+        session = "Intraday"
+    t = _iso(b.timestamp)
+    return {
+        "time": t,
+        "timestamp": t,
+        "open": _num(b.open),
+        "high": _num(b.high),
+        "low": _num(b.low),
+        "close": _num(b.close),
+        "volume": _num(b.volume),
+        "turnover": _num(getattr(b, "turnover", None)),
+        "session": session,
+    }
+
+
+def _filter_session(bars, session):
+    if not session or session == "all":
+        return bars
+    want = "Intraday"
+    return [b for b in bars if (b.get("session") or "Intraday") == want]
+
+
+def cmd_quote(symbols):
+    if not symbols:
+        raise SystemExit("lbsafe: quote requires a symbol")
+    with _Quiet():
+        rows = _ctx().quote(symbols) or []
+    out = []
+    for q in rows:
+        rec = {
+            "symbol": q.symbol,
+            "last": _num(q.last_done),
+            "prev_close": _num(q.prev_close),
+            "open": _num(q.open),
+            "high": _num(q.high),
+            "low": _num(q.low),
+            "volume": _num(q.volume),
+            "turnover": _num(q.turnover),
+            "status": str(q.trade_status or ""),
+            "timestamp": _iso(q.timestamp),
+        }
+        rec["pre_market"] = _ext_quote(q.pre_market_quote)
+        rec["post_market"] = _ext_quote(q.post_market_quote)
+        rec["overnight"] = _ext_quote(q.overnight_quote)
+        last, prev = rec["last"], rec["prev_close"]
+        if last is not None and prev not in (None, 0):
+            rec["change_value"] = last - prev
+            rec["change_percentage"] = (last / prev - 1) * 100
+        out.append(rec)
+    return out
+
+
+def cmd_option_chain(under, expiry=None):
+    ctx = _ctx()
+    if not expiry:
+        with _Quiet():
+            days = ctx.option_chain_expiry_date_list(under) or []
+        out = []
+        for d in days:
+            iso = d.isoformat() if hasattr(d, "isoformat") else str(d)[:10]
+            out.append({"expiry_date": iso})
+        return out
+    d = datetime.fromisoformat(str(expiry)[:10]).date()
+    with _Quiet():
+        info = ctx.option_chain_info_by_date(under, d) or []
+    out = []
+    for r in info:
+        out.append({
+            "expiry_date": str(expiry)[:10],
+            "strike": _num(r.price),
+            "call_symbol": r.call_symbol,
+            "put_symbol": r.put_symbol,
+            "standard": "true" if getattr(r, "standard", True) else "false",
+        })
+    return out
+
+
+def cmd_option_quote(symbols):
+    if not symbols:
+        return []
+    rows = []
+    ctx = _ctx()
+    for i in range(0, len(symbols), 50):
+        with _Quiet():
+            part = ctx.option_quote(symbols[i:i + 50]) or []
+        rows.extend(part)
+    out = []
+    for q in rows:
+        iv = _num(q.implied_volatility) or 0.0
+        if iv > 2:
+            iv = iv / 100.0
+        direction = str(q.direction or "")
+        if "." in direction:
+            direction = direction.split(".")[-1]  # OptionDirection.Call -> Call
+        typ = direction
+        rec = {
+            "symbol": q.symbol,
+            "last": _num(q.last_done),
+            "strike": _num(q.strike_price),
+            "strike_price": _num(q.strike_price),
+            "expiry": _iso(q.expiry_date) or str(q.expiry_date or ""),
+            "expiry_date": str(getattr(q.expiry_date, "isoformat", lambda: q.expiry_date)() if q.expiry_date else ""),
+            "type": typ,
+            "direction": direction,
+            "volume": _num(q.volume) or 0,
+            "open_interest": int(q.open_interest or 0),
+            "implied_volatility": iv,
+            "underlying_symbol": getattr(q, "underlying_symbol", None),
+        }
+        out.append(rec)
+    return out
+
+
+def cmd_kline(symbol, period="day", count=100, adjust="none", session="intraday"):
+    from longport.openapi import TradeSession
+    ctx = _ctx()
+    n = int(count or 100)
+    with _Quiet():
+        raw = ctx.candlesticks(symbol, _period(period), n, _adjust(adjust)) or []
+    bars = _filter_session([_bar(b) for b in raw], session)
+    return bars
+
+
+def cmd_kline_history(symbol, start, end, period="day", adjust="none", session="all"):
+    if not start or not end:
+        raise SystemExit("lbsafe: kline history requires --start and --end")
+    ctx = _ctx()
+    d0 = datetime.fromisoformat(str(start)[:10]).date()
+    d1 = datetime.fromisoformat(str(end)[:10]).date()
+    with _Quiet():
+        raw = ctx.history_candlesticks_by_date(
+            symbol, _period(period), _adjust(adjust), start=d0, end=d1
+        ) or []
+    return _filter_session([_bar(b) for b in raw], session)
+
+
+def cmd_trading_days(market="US", start=None, end=None):
+    from longport.openapi import Market
+    mk = {"US": Market.US, "HK": Market.HK, "CN": Market.CN, "SG": Market.SG}.get(
+        (market or "US").upper(), Market.US
+    )
+    today = datetime.now(timezone.utc).date()
+    b = datetime.fromisoformat(start).date() if start else today - timedelta(days=10)
+    e = datetime.fromisoformat(end).date() if end else today + timedelta(days=20)
+    with _Quiet():
+        rec = _ctx().trading_days(mk, b, e)
+    def dates(xs):
+        out = []
+        for d in xs or []:
+            out.append(d.isoformat() if hasattr(d, "isoformat") else str(d)[:10])
+        return out
+    return {
+        "trading_days": dates(getattr(rec, "trading_days", None) or getattr(rec, "trading_day", None) or []),
+        "half_trading_days": dates(getattr(rec, "half_trading_days", None) or []),
+    }
+
+
+def cmd_depth(symbol):
+    with _Quiet():
+        d = _ctx().depth(symbol)
+
+    def side(rows):
+        out = []
+        for r in rows or []:
+            out.append({
+                "price": _num(getattr(r, "price", None)),
+                "volume": _num(getattr(r, "volume", None) or getattr(r, "size", None)),
+            })
+        return out
+    return {
+        "symbol": symbol,
+        "asks": side(getattr(d, "asks", None)),
+        "bids": side(getattr(d, "bids", None)),
+    }
+
+
+def sdk_dispatch(argv):
+    args, opts = _parse(argv)
+    if not args:
+        raise SystemExit("lbsafe: missing command")
+    cmd = args[0]
+    if cmd == "quote":
+        return cmd_quote(args[1:])
+    if cmd == "option" and len(args) >= 2 and args[1] == "chain":
+        under = args[2] if len(args) > 2 else opts.get("symbol")
+        return cmd_option_chain(under, opts.get("date"))
+    if cmd == "option" and len(args) >= 2 and args[1] == "quote":
+        return cmd_option_quote(args[2:])
+    if cmd == "kline" and len(args) >= 2 and args[1] == "history":
+        return cmd_kline_history(
+            args[2] if len(args) > 2 else opts.get("symbol"),
+            opts.get("start"), opts.get("end"),
+            opts.get("period", "day"), opts.get("adjust", "none"),
+            opts.get("session", "all"),
+        )
+    if cmd == "kline":
+        return cmd_kline(
+            args[1] if len(args) > 1 else opts.get("symbol"),
+            opts.get("period", "day"), opts.get("count", 100),
+            opts.get("adjust", "none"), opts.get("session", "intraday"),
+        )
+    if cmd == "trading" and len(args) >= 2 and args[1] == "days":
+        return cmd_trading_days(args[2] if len(args) > 2 else opts.get("market", "US"),
+                                opts.get("start"), opts.get("end"))
+    if cmd == "depth":
+        return cmd_depth(args[1] if len(args) > 1 else opts.get("symbol"))
+    if cmd == "finance-calendar":
+        # No equivalent in the OpenAPI SDK; callers already treat a miss as empty.
+        return {"list": []}
+    raise SystemExit("lbsafe: unsupported command %r" % (args[:2],))
+
+
+def try_cli(argv):
+    if not os.path.isfile(REAL) or not os.access(REAL, os.X_OK):
+        return None
+    try:
+        r = subprocess.run([REAL] + argv, capture_output=True, text=True, timeout=50)
+    except Exception:
+        return None
+    out = (r.stdout or "").strip()
+    if r.returncode == 0 and out and out[0] in "[{":
+        return r.stdout
+    err = (r.stderr or r.stdout or "")
+    # Fall back on auth / missing-binary failures; other CLI errors still fall back
+    # if there is no JSON, so pages stay up.
+    if r.returncode != 0:
+        return None
+    return r.stdout if out else None
+
+
+def main():
+    a = sys.argv[1:]
+    if _blocked(a):
+        sys.stderr.write("lbsafe: blocked non-market-data command %r\n" % a[:2])
+        sys.exit(13)
+    raw = try_cli(a)
+    if raw is not None:
+        sys.stdout.write(raw)
+        return 0
+    try:
+        data = sdk_dispatch(a)
+    except Exception as e:
+        sys.stderr.write("lbsafe: sdk fallback failed: %s\n" % str(e).split("LONGPORT")[0][:400])
+        sys.exit(1)
+    json.dump(data, sys.stdout, ensure_ascii=False, default=str)
+    sys.stdout.write("\n")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
