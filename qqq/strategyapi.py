@@ -640,6 +640,22 @@ def _atm_iv(by, spot):
     return sum(ivs) / len(ivs) if ivs else None
 
 
+def _smile(by):
+    rows = []
+    for k in sorted(by):
+        rec = by[k]
+        if rec.get('iv_c') or rec.get('iv_p'):
+            rows.append({'k': rec['k'], 'call': rec.get('iv_c'), 'put': rec.get('iv_p')})
+    return rows
+
+
+def _gex_bars(by, top=40):
+    ks = sorted(by, key=lambda k: -abs(by[k]['gex_oi']))[:top]
+    ks = sorted(ks)
+    return [{'k': round(k, 2), 'gex_oi': by[k]['gex_oi'], 'gex_vol': by[k]['gex_vol'],
+             'dex': by[k]['dex'], 'oi': by[k]['oi_c'] + by[k]['oi_p'],
+             'vol': by[k]['vol_c'] + by[k]['vol_p']} for k in ks]
+
 
 SESSION_SEC = 6.5 * 3600  # 09:30–16:00 ET
 
