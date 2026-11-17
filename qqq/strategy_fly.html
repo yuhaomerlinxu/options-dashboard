@@ -45,6 +45,14 @@ table.fly .cp{display:block;color:#64748b;font-size:10px}
 .pnlstats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
 .up{color:#34d399}.dn{color:#fb7185}
 .note{font-size:11px;color:#667787;margin-top:8px;line-height:1.45}
+.info{cursor:help;color:#22d3ee;font-size:11px;border:1px solid #164e63;border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;position:relative;margin-left:6px;vertical-align:middle}
+.info span{display:none;position:absolute;z-index:20;left:0;top:18px;width:300px;background:#0b1220;border:1px solid var(--line);color:#cbd5e1;padding:8px;border-radius:8px;font-size:11px;font-weight:400;line-height:1.45;box-shadow:0 8px 24px #000a;text-align:left}
+.info:hover span{display:block}
+.estcomp{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+@media(max-width:800px){.estcomp{grid-template-columns:1fr 1fr}}
+.estcomp div{background:#0d1520;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.wbar{height:6px;background:#1a2430;border-radius:4px;margin-top:6px;overflow:hidden}
+.wbar i{display:block;height:100%;background:#22d3ee}
 .legs{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
 .legs div{background:#0d1520;border:1px solid var(--line);border-radius:8px;padding:8px 12px}
 nav.bot{position:fixed;bottom:6px;left:8px;z-index:99;font:12px sans-serif;background:#111a;padding:3px 8px;border-radius:6px}
@@ -63,7 +71,7 @@ nav.bot{position:fixed;bottom:6px;left:8px;z-index:99;font:12px sans-serif;backg
 </nav>
 <div id="wrap">
   <header class="hero">
-    <h1>美股期权策略雷达</h1>
+    <h1>蝶式机会雷达</h1>
     <div id="clocks"><span id="bj">北京：—</span><span id="et">美东：—</span></div>
   </header>
   <div class="bar">
@@ -78,6 +86,19 @@ nav.bot{position:fixed;bottom:6px;left:8px;z-index:99;font:12px sans-serif;backg
   <div id="load">正在加载期权链，第一次大约 20–40 秒…</div>
   <div id="app" style="display:none">
     <div class="stats" id="stats"></div>
+    <section class="sec" style="margin-top:16px">
+      <div class="card" id="estcard">
+        <div class="s">收盘预估 <span class="info">ℹ<span id="esttip"></span></span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin-top:6px">
+          <div>
+            <div class="v" id="estv" style="font-size:28px">—</div>
+            <div class="s" id="estmeta"></div>
+          </div>
+          <div style="flex:1;min-width:240px" id="estranges"></div>
+        </div>
+        <div class="estcomp" id="estcomp"></div>
+      </div>
+    </section>
     <section class="sec" style="margin-top:16px">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <h2>蝶式机会雷达</h2>
@@ -192,7 +213,26 @@ function render(d){
      <div class="card"><h3>组合买入成本</h3><div class="v">${s.cost!=null?('$'+s.cost.toFixed(2)):'—'}</div><div class="s">到期最大亏损同等金额</div></div>
      <div class="card"><h3>到期盈亏平衡点</h3><div class="v" style="font-size:16px">${p.be?px(p.be[0])+' / '+px(p.be[1]):'—'}</div><div class="s">${p.inside?'参考价在盈利区内':'参考价在盈利区外，距最近边界 '+(p.edge??'—')+'点'}</div></div>
      <div class="card"><h3>到期最大盈利</h3><div class="v up">${p.max_profit!=null?usd(p.max_profit):'—'}</div><div class="s">峰值收益 / 成本 ${p.pct!=null?(p.pct.toFixed(1)+'%'):'—'}</div></div>`;
-  $('tgt').textContent=px(d.target,0);
+  const est=d.close_estimate||{};
+  $('estv').textContent=px(est.estimate!=null?est.estimate:d.target, 2);
+  $('esttip').textContent=est.formula||'';
+  const wr=est.in_rth?'盘中':'非盘中，按整段交易时段尚未开始';
+  $('estmeta').textContent=(est.asof_bj?('数据 '+est.asof_bj+' 北京 / '+(est.asof_et||'')):'')
+    +(est.em_close!=null?('　收盘前预期波动 ±'+px(est.em_close,2)):'')
+    +(est.atm_iv!=null?('　IV '+(100*est.atm_iv).toFixed(1)+'%'):'')
+    +'　'+wr;
+  const mk2=(lab,rng,col)=>{
+    if(!rng) return '';
+    return `<div class="rng"><span class="lab">${lab}</span><span class="s">${px(rng[0])} – ${px(rng[1])}</span></div>`;
+  };
+  $('estranges').innerHTML=mk2('50% 区间',est.range_50,'#5eead4')+mk2('75% 区间',est.range_75,'#0e7490')
+    +(est.note?('<div class="s" style="margin-top:4px">'+est.note+'</div>'):'');
+  $('estcomp').innerHTML=(est.components||[]).map(c=>
+    `<div><div class="s">${c.name}</div><div class="v" style="font-size:16px">${px(c.value,2)}</div>
+     <div class="s">权重 ${(100*(c.weight||0)).toFixed(1)}%</div>
+     <div class="wbar"><i style="width:${(100*(c.weight||0)).toFixed(1)}%"></i></div></div>`
+  ).join('');
+  $('tgt').textContent=px(d.target,2);
   $('selv').textContent=s.center? (px(s.center,0)+' / '+s.wing+'点 · '+(s.cp||'')) : '—';
   $('fit').textContent=d.fit||'—';
   $('fit').className='badge'+(d.fit==='适配'?' ok':'');
@@ -239,7 +279,7 @@ function render(d){
   $('legs').innerHTML=(p.legs||[]).map(l=>`<div><b>${l.side} ${l.n}×</b> ${px(l.k, l.k>=1000?0:2)} ${l.cp==='C'?'Call':'Put'}</div>`).join('')
     || '—';
   const notes=[d.approx, d.source&&d.source.price, d.source&&d.source.now, d.source&&d.source.range,
-    '11/13 当日到期已结束，默认显示下一期 '+d.expiry+'。自动刷新约 10 秒。'].filter(Boolean);
+    '默认显示最近未到期合约 '+d.expiry+'。自动刷新约 10 秒。'].filter(Boolean);
   $('notes').textContent=notes.join('  ·  ');
 }
 let loading=false;

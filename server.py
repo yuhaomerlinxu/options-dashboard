@@ -164,7 +164,7 @@ class H(qqqapp.Mixin, SimpleHTTPRequestHandler):
         p = s.path.split("?")[0]
         if p in ("/levels", "/radar"):
             s.send_response(302); s.send_header("Location", "/qqq/chart?s=QQQ" if p == "/levels" else "/qqq/radar"); s.end_headers(); return
-        if p == "/qqq" or p.startswith("/qqq/") or p == "/echo" or p.startswith("/echo/") or p == "/mbot" or p.startswith("/mbot/") or p == "/strategy" or p.startswith("/strategy/") or p == "/funds" or p.startswith("/funds/"): return s.qqq_get()
+        if p == "/qqq" or p.startswith("/qqq/") or p == "/echo" or p.startswith("/echo/") or p == "/mbot" or p.startswith("/mbot/") or p == "/strategy" or p.startswith("/strategy/") or p == "/funds" or p.startswith("/funds/") or p == "/api/strategy/close_estimate" or p.startswith("/api/strategy/"): return s.qqq_get()
         if p == "/api/tickers": return s.j(TICKERS)
         if p.startswith("/api/add/"):
             t = re.sub(r"[^A-Z.]", "", p.rsplit("/", 1)[1].upper())[:6]

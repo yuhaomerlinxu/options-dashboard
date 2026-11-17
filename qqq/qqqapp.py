@@ -195,6 +195,16 @@ class Mixin:
             except Exception as e:
                 r={'error':str(e)}
             self.send(200,json.dumps(r,ensure_ascii=False,default=str).encode(),'application/json; charset=utf-8');return
+        if p in ('/api/strategy/close_estimate','/strategy/close_estimate'):
+            qs=parse_qs(urlparse(self.path).query)
+            sy=qs.get('symbol', qs.get('s',['SPX']))[0]
+            ex=(qs.get('expiry') or [None])[0]
+            try:
+                import strategyapi
+                r=strategyapi.close_estimate(sy, ex)
+            except Exception as e:
+                r={'error':str(e)}
+            self.send(200,json.dumps(r,ensure_ascii=False,default=str).encode(),'application/json; charset=utf-8');return
         if p=='/strategy/fly':self.send(200,SFPAGE,'text/html; charset=utf-8');return
         if p=='/strategy/fly/data':
             qs=parse_qs(urlparse(self.path).query)

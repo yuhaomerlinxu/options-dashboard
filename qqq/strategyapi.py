@@ -640,21 +640,335 @@ def _atm_iv(by, spot):
     return sum(ivs) / len(ivs) if ivs else None
 
 
-def _smile(by):
-    rows = []
-    for k in sorted(by):
-        rec = by[k]
-        if rec.get('iv_c') or rec.get('iv_p'):
-            rows.append({'k': rec['k'], 'call': rec.get('iv_c'), 'put': rec.get('iv_p')})
-    return rows
+
+SESSION_SEC = 6.5 * 3600  # 09:30–16:00 ET
+
+FORMULA_CLOSE_ZH = (
+    '收盘预估 = w现价×现价 + w磁铁×GEX核心磁铁 + w痛点×Max Pain + w支点×（动态支点或当日POC）。'
+    'w现价 = 1 − √(距收盘剩余交易时间 / 6.5 小时全时段)，限制在 20%–90%；尾盘 5 分钟提到 95%。'
+    '盘前、收盘后和周末按“整段交易时段尚未开始”处理，现价权重因此约 20%。'
+    '余下权重在磁铁、Max Pain 和支点之间按距离衰减分配：距离相对收盘前预期波动越远，权重越小（衰减 e^(−0.7×距离/预期波动)）。'
+    '磁铁附近净 GEX 为负时，钉住不可靠，结构项整体再打 0.55，多出的权重加回现价。'
+    '50% / 75% 区间 = 预估 ± 0.67 / 1.15 × 收盘前预期波动；预期波动 = 现价 × ATM隐含波动率 × √(剩余交易时间 / (252×6.5小时))。'
+    '现价取常规时段最新价；盘后/盘前用上一交易日收盘。SPX 的磁铁和 Max Pain 来自 SPY 期权按比例换算。这是结构估计，不是保证。'
+)
 
 
-def _gex_bars(by, top=40):
-    ks = sorted(by, key=lambda k: -abs(by[k]['gex_oi']))[:top]
-    ks = sorted(ks)
-    return [{'k': round(k, 2), 'gex_oi': by[k]['gex_oi'], 'gex_vol': by[k]['gex_vol'],
-             'dex': by[k]['dex'], 'oi': by[k]['oi_c'] + by[k]['oi_p'],
-             'vol': by[k]['vol_c'] + by[k]['vol_p']} for k in ks]
+def _session_remaining(now=None):
+    """Return (remaining_sec, session_sec, in_rth). Outside RTH / before open / weekend: full session remaining."""
+    now = now or datetime.now(ET)
+    sess = SESSION_SEC
+    if now.weekday() >= 5:
+        return sess, sess, False
+    open_t = now.replace(hour=9, minute=30, second=0, microsecond=0)
+    close_t = now.replace(hour=16, minute=0, second=0, microsecond=0)
+    if now < open_t or now >= close_t:
+        return sess, sess, False
+    rem = (close_t - now).total_seconds()
+    return max(0.0, rem), sess, True
+
+
+def _spot_weight(t_rem, t_sess):
+    if t_sess <= 0:
+        return 1.0
+    if t_rem <= 0:
+        return 1.0
+    if t_rem <= 5 * 60:
+        return 0.95
+    raw = 1.0 - math.sqrt(t_rem / t_sess)
+    return min(0.90, max(0.20, raw))
+
+
+def _dist_decay(spot, level, em):
+    if level is None or em is None or em <= 0:
+        return 0.0
+    return math.exp(-0.7 * abs(float(spot) - float(level)) / float(em))
+
+
+def _net_near_gex(by, magnet, em):
+    if not by or magnet is None or not em:
+        return 0.0, 0.0
+    near = [v for k, v in by.items() if abs(k - magnet) <= em * 0.5]
+    net = sum(v['gex_oi'] for v in near)
+    tot = sum(abs(v['gex_oi']) for v in by.values()) or 1.0
+    return net, tot
+
+
+def blend_close_estimate(spot, levels, by=None, iv=None, now=None, asof_ts=None, scale_note=None):
+    """Blend RTH spot, GEX magnet, Max Pain and dyn_pivot/POC into a close estimate."""
+    now = now or datetime.now(ET)
+    t_rem, t_sess, in_rth = _session_remaining(now)
+    # expected move to the coming RTH close
+    iv = float(iv) if iv else None
+    em_daily = _em(spot, iv, 1) if iv else None
+    frac = math.sqrt(t_rem / t_sess) if t_sess else 1.0
+    em_close = (em_daily * frac) if em_daily else (abs(spot) * 0.006)
+    magnet = (levels or {}).get('core_magnet')
+    max_pain = (levels or {}).get('max_pain')
+    # Max Pain at the edge of the fetched strike window is usually an artifact of a truncated chain.
+    if by and max_pain is not None:
+        ks = sorted(by)
+        if ks and (max_pain >= ks[-1] * 0.995 or max_pain <= ks[0] * 1.005):
+            max_pain = None
+    pivot = (levels or {}).get('dyn_pivot') or (levels or {}).get('poc')
+    pivot_name = '动态支点' if (levels or {}).get('dyn_pivot') is not None else 'POC'
+
+    net_near, tot_gex = _net_near_gex(by or {}, magnet, em_close)
+    pin_scale = 0.55 if net_near < 0 else 1.0
+
+    w_spot0 = _spot_weight(t_rem, t_sess)
+    w_struct_budget = (1.0 - w_spot0) * pin_scale
+    w_spot = 1.0 - w_struct_budget
+
+    parts = [
+        ('GEX 核心磁铁', 'magnet', magnet, _dist_decay(spot, magnet, em_close), 1.0),
+        ('Max Pain', 'max_pain', max_pain, _dist_decay(spot, max_pain, em_close), 1.0),
+        (pivot_name, 'pivot', pivot, _dist_decay(spot, pivot, em_close), 0.5),
+    ]
+    raw = [(n, k, v, d * base) for n, k, v, d, base in parts if v is not None and d * base > 1e-9]
+    sraw = sum(r[3] for r in raw)
+    components = [{'name': '现价', 'key': 'spot', 'value': round(float(spot), 2),
+                   'weight': round(w_spot, 4), 'decay': 1.0}]
+    if sraw <= 0 or w_struct_budget <= 0:
+        w_spot = 1.0
+        components[0]['weight'] = 1.0
+        est = float(spot)
+    else:
+        est = w_spot * float(spot)
+        for n, k, v, rw in raw:
+            w = w_struct_budget * (rw / sraw)
+            components.append({'name': n, 'key': k, 'value': round(float(v), 2),
+                               'weight': round(w, 4), 'decay': round(rw, 4)})
+            est += w * float(v)
+        # leftover rounding to spot
+        wsum = sum(c['weight'] for c in components)
+        if abs(wsum - 1) > 1e-6:
+            components[0]['weight'] = round(components[0]['weight'] + (1 - wsum), 4)
+
+    lo50, hi50 = est - 0.67 * em_close, est + 0.67 * em_close
+    lo75, hi75 = est - 1.15 * em_close, est + 1.15 * em_close
+    ts = asof_ts or int(now.timestamp())
+    asof_dt = datetime.fromtimestamp(ts, ET) if asof_ts else now
+    return {
+        'estimate': round(est, 2),
+        'range_50': [round(lo50, 2), round(hi50, 2)],
+        'range_75': [round(lo75, 2), round(hi75, 2)],
+        'em_close': round(em_close, 2),
+        'atm_iv': None if iv is None else round(iv, 4),
+        'spot': round(float(spot), 2),
+        'components': components,
+        'w_spot': round(w_spot, 4),
+        'pin_scale': pin_scale,
+        'net_near_gex': round(net_near, 2),
+        't_remaining_sec': int(t_rem),
+        't_session_sec': int(t_sess),
+        'in_rth': in_rth,
+        'asof_bj': asof_dt.astimezone(BJ).strftime('%Y-%m-%d %H:%M:%S'),
+        'asof_et': asof_dt.strftime('%Y-%m-%d %H:%M:%S ET'),
+        'computed_bj': datetime.now(BJ).strftime('%Y-%m-%d %H:%M:%S'),
+        'formula': FORMULA_CLOSE_ZH,
+        'note': scale_note,
+    }
+
+
+
+def _quiet_stdio():
+    """Silence C-level stdout/stderr (the Longport SDK prints a quote-level table)."""
+    import os
+    class _G:
+        def __enter__(self):
+            self._null = os.open(os.devnull, os.O_WRONLY)
+            self._o1, self._o2 = os.dup(1), os.dup(2)
+            os.dup2(self._null, 1)
+            os.dup2(self._null, 2)
+            return self
+        def __exit__(self, *exc):
+            os.dup2(self._o1, 1)
+            os.dup2(self._o2, 2)
+            os.close(self._o1)
+            os.close(self._o2)
+            os.close(self._null)
+            return False
+    return _G()
+
+
+def _sdk_ctx():
+    """Optional Longport Python SDK (read-only). Used when the CLI wrapper is unavailable."""
+    from longport.openapi import Config, QuoteContext
+    ctx = getattr(_sdk_ctx, '_ctx', None)
+    if ctx is None:
+        with _quiet_stdio():
+            ctx = QuoteContext(Config.from_apikey_env())
+        _sdk_ctx._ctx = ctx
+    return ctx
+
+
+def _sdk_ts(ts):
+    if hasattr(ts, 'timestamp'):
+        return int(ts.timestamp())
+    s = str(ts).replace('Z', '+00:00')
+    return int(datetime.fromisoformat(s).timestamp())
+
+
+def _sdk_quote(symbol):
+    q = _sdk_ctx().quote([symbol])[0]
+    last = float(q.last_done)
+    prev = float(q.prev_close or last)
+    return {
+        'last': last, 'prev_close': prev,
+        'open': float(q.open) if q.open is not None else None,
+        'high': float(q.high) if q.high is not None else None,
+        'low': float(q.low) if q.low is not None else None,
+        'change': last - prev,
+        'change_pct': (last / prev - 1) * 100 if prev else 0,
+    }
+
+
+def _sdk_bars(symbol, count=500):
+    from longport.openapi import Period, AdjustType
+    raw = _sdk_ctx().candlesticks(symbol, Period.Min_1, count, AdjustType.NoAdjust) or []
+    out = []
+    for b in raw:
+        sess = str(getattr(b, 'trade_session', '') or '')
+        if sess and 'Intraday' not in sess:
+            continue
+        out.append({
+            't': _sdk_ts(b.timestamp),
+            'o': float(b.open), 'h': float(b.high),
+            'l': float(b.low), 'c': float(b.close),
+            'v': float(b.volume or 0),
+        })
+    # keep last RTH day
+    if out:
+        last_d = str(E._et(out[-1]['t']).date())
+        out = [b for b in out if str(E._et(b['t']).date()) == last_d]
+    return out
+
+
+def _sdk_exps(under):
+    today = datetime.now(ET).date()
+    rows = _sdk_ctx().option_chain_expiry_date_list(under) or []
+    out = []
+    for d in rows:
+        if hasattr(d, 'isoformat'):
+            iso = d.isoformat()
+        else:
+            iso = str(d)[:10]
+        if iso >= today.isoformat():
+            out.append(iso)
+    return out
+
+
+def _sdk_option_quotes(under, expiry, spot, window=0.10):
+    d = datetime.fromisoformat(expiry).date()
+    info = _sdk_ctx().option_chain_info_by_date(under, d) or []
+    picks = []
+    for r in info:
+        if hasattr(r, 'standard') and not r.standard:
+            continue
+        k = float(r.price)
+        if abs(k / spot - 1) > window:
+            continue
+        picks.append(r)
+    cons = []
+    for r in picks:
+        cons.append(r.call_symbol)
+        cons.append(r.put_symbol)
+    rows, ks = [], [float(r.price) for r in picks]
+    ctx = _sdk_ctx()
+    for i in range(0, len(cons), 50):
+        try:
+            part = ctx.option_quote(cons[i:i + 50]) or []
+        except Exception:
+            part = []
+        for q in part:
+            iv = float(q.implied_volatility or 0)
+            if iv > 2:  # percent quoted
+                iv /= 100.0
+            direction = str(q.direction or '')
+            rows.append({
+                'strike_price': float(q.strike_price),
+                'open_interest': int(q.open_interest or 0),
+                'volume': float(q.volume or 0),
+                'implied_volatility': iv,
+                'direction': direction,
+                'last': float(q.last_done) if q.last_done is not None else None,
+            })
+    return rows, ks
+
+
+def _cli_or_sdk(cli_fn, sdk_fn):
+    try:
+        return cli_fn()
+    except Exception:
+        with _quiet_stdio():
+            return sdk_fn()
+
+
+def close_estimate(sym='SPX', expiry=None):
+    """Fetch market data (same caches as /strategy) and return a close-estimate dict.
+
+    Prefers lbsafe/Longbridge CLI (as on Render). If the CLI is unavailable, falls
+    back to the official Longport Python SDK using LONGPORT_* env vars. Read-only.
+    """
+    spec = resolve(sym)
+    rth = _rth_now()
+    q = _cli_or_sdk(
+        lambda: E._cached(('st-q', spec['bar']), _ttl(5, 60), lambda: E._quote(spec['bar'])),
+        lambda: _sdk_quote(spec['bar']))
+    bars = _cli_or_sdk(
+        lambda: E._cached(('st-1m', spec['bar']), _ttl(8, 120), lambda: _bars(spec['bar'], '1m', 500, 1)),
+        lambda: _sdk_bars(spec['bar']))
+    last = bars[-1]['c'] if bars else q['last']
+    if rth:
+        last = q['last']
+    last_t = bars[-1]['t'] if bars else int(time.time())
+    if spec['scale'] == 'spy':
+        spy = _cli_or_sdk(
+            lambda: E._cached('st-q-spy', _ttl(5, 60), lambda: E._quote('SPY.US')),
+            lambda: _sdk_quote('SPY.US'))
+        scale = last / spy['last']
+        spot_opt = spy['last']
+        scale_note = 'SPX 模式用 SPY 期权按 SPX/SPY=%.4f 换算' % scale
+    else:
+        scale, spot_opt = 1.0, last
+        scale_note = None
+    exps = _cli_or_sdk(
+        lambda: E._cached(('st-exps', spec['opt']), _ttl(60, 1800), lambda: _exps(spec['opt'])),
+        lambda: _sdk_exps(spec['opt']))
+    if not expiry or expiry not in exps:
+        expiry = exps[0] if exps else None
+    if not expiry:
+        return {'error': '没有可用的未到期期权', 'symbol': spec['label']}
+    rows, ks = _cli_or_sdk(
+        lambda: E._cached(('st-opt', spec['id'], expiry), _ttl(60, 1800),
+                          lambda: _option_quotes(spec['opt'], expiry, spot_opt, 0.10)),
+        lambda: _sdk_option_quotes(spec['opt'], expiry, spot_opt, 0.10))
+    by, nused, T = _greeks(rows, spot_opt, expiry, scale)
+    mp = _max_pain(rows, scale)
+    profile = _profile(bars, 1.0 if spec['id'] == 'SPX' else 0.25)
+    levels = _levels_from(by, last, profile, mp)
+    iv = _atm_iv(by, last)
+    est = blend_close_estimate(last, levels, by, iv, asof_ts=last_t, scale_note=scale_note)
+    est.update({
+        'symbol': spec['label'],
+        'expiry': expiry,
+        'exps': exps,
+        'n_quotes': nused,
+        'levels': {
+            'core_magnet': levels.get('core_magnet'),
+            'max_pain': levels.get('max_pain'),
+            'dyn_pivot': levels.get('dyn_pivot'),
+            'poc': levels.get('poc'),
+            'zero_gamma': levels.get('zero_gamma'),
+            'support': levels.get('support'),
+            'resist': levels.get('resist'),
+        },
+        'prev_close': q.get('prev_close'),
+        'source': 'longbridge-cli-or-sdk',
+    })
+    return est
+
 
 
 def payload(sym='QQQ', expiry=None):
@@ -890,8 +1204,17 @@ def fly_payload(sym='SPX', expiry=None, center=None, wing=None, typ='auto'):
             row['cells'].append(best or {'wing': dw, 'cost': None, 'cp': None})
         grid.append(row)
 
-    # close target from last payload cache if any, else round last
-    target = round(last / (5 if last > 1000 else 1)) * (5 if last > 1000 else 1)
+    # blended close estimate (same function as /api/strategy/close_estimate)
+    mp = _max_pain(rows, scale)
+    profile = _profile(bars, 1.0 if spec['id'] == 'SPX' else 0.25)
+    levels = _levels_from(by, last, profile, mp)
+    iv_est = _atm_iv(by, last)
+    last_t_est = bars[-1]['t'] if bars else int(time.time())
+    scale_note = ('SPX 模式用 SPY 期权按 SPX/SPY=%.4f 换算' % scale) if spec['scale'] else None
+    close_est = blend_close_estimate(last, levels, by, iv_est, asof_ts=last_t_est, scale_note=scale_note)
+    close_est['symbol'] = spec['label']
+    close_est['expiry'] = expiry
+    target = close_est['estimate']
     # default selection: cheaper fly at center nearest target, smallest available wing
     def pick_default():
         if not grid:
@@ -1052,8 +1375,9 @@ def fly_payload(sym='SPX', expiry=None, center=None, wing=None, typ='auto'):
         'asof_et': _asof(last_t),
         'asof_ts': last_t,
         'tte': tte_lbl,
-        'contract': 'SPYW 换算' if spec['scale'] else spec['opt'].replace('.US', ''),
+        'contract': 'SPY 换算' if spec['scale'] else spec['opt'].replace('.US', ''),
         'target': target,
+        'close_estimate': close_est,
         'sel': sel,
         'pnl': pnl,
         'fit': fit,
