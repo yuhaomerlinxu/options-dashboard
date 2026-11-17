@@ -11,7 +11,7 @@ Only market-data subcommands are allowed. Orders, trades, alerts and auth
 are refused. This script never prints credentials.
 """
 from __future__ import annotations
-import json, os, sys, subprocess
+import json, os, sys, subprocess, time
 from datetime import datetime, date, timezone, timedelta
 
 REAL = os.environ.get("LONGBRIDGE_BIN", "/usr/local/bin/longbridge")
@@ -365,20 +365,55 @@ def sdk_dispatch(argv):
     raise SystemExit("lbsafe: unsupported command %r" % (args[:2],))
 
 
+# Shared across lbsafe processes in this container. Callers often have
+# 10-40s timeouts, so a hanging CLI would kill us before the SDK runs.
+CLI_SKIP = os.environ.get("LBSAFE_CLI_SKIP", "/tmp/lbsafe-cli-skip")
+CLI_SKIP_TTL = 6 * 3600
+CLI_TIMEOUT = 5
+
+
+def _cli_skipped():
+    try:
+        return (time.time() - os.path.getmtime(CLI_SKIP)) < CLI_SKIP_TTL
+    except OSError:
+        return False
+
+
+def _mark_cli_dead():
+    try:
+        with open(CLI_SKIP, "w") as f:
+            f.write(str(int(time.time())))
+    except OSError:
+        pass
+
+
+def _mark_cli_ok():
+    try:
+        os.remove(CLI_SKIP)
+    except OSError:
+        pass
+
+
 def try_cli(argv):
+    if _cli_skipped():
+        return None
     if not os.path.isfile(REAL) or not os.access(REAL, os.X_OK):
         return None
     try:
-        r = subprocess.run([REAL] + argv, capture_output=True, text=True, timeout=50)
+        r = subprocess.run([REAL] + argv, capture_output=True, text=True, timeout=CLI_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        _mark_cli_dead()
+        return None
     except Exception:
         return None
     out = (r.stdout or "").strip()
     if r.returncode == 0 and out and out[0] in "[{":
+        _mark_cli_ok()
         return r.stdout
-    err = (r.stderr or r.stdout or "")
-    # Fall back on auth / missing-binary failures; other CLI errors still fall back
-    # if there is no JSON, so pages stay up.
+    err = (r.stderr or r.stdout or "").lower()
     if r.returncode != 0:
+        if any(s in err for s in ("expired", "auth login", "refresh token", "unauthorized", "not login", "please login")):
+            _mark_cli_dead()
         return None
     return r.stdout if out else None
 
