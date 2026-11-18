@@ -665,6 +665,7 @@ FORMULA_CLOSE_ZH = (
     '盘前、收盘后和周末按“整段交易时段尚未开始”处理，现价权重因此约 20%。'
     '余下权重在磁铁、Max Pain 和支点之间按距离衰减分配：距离相对收盘前预期波动越远，权重越小（衰减 e^(−0.7×距离/预期波动)）。'
     '磁铁附近净 GEX 为负时，钉住不可靠，结构项整体再打 0.55，多出的权重加回现价。'
+    '现价低于伽马翻转点（Zero Gamma）时，去掉磁铁、Max Pain 和支点的权重，预估等于现价，50% / 75% 区间仍按收盘前预期波动围绕现价计算。现价在翻转点上方时，仍用上述结构加权。翻转点缺失时不做这项切换。'
     '50% / 75% 区间 = 预估 ± 0.67 / 1.15 × 收盘前预期波动；预期波动 = 现价 × ATM隐含波动率 × √(剩余交易时间 / (252×6.5小时))。'
     '现价取常规时段最新价；盘后/盘前用上一交易日收盘。SPX 的磁铁和 Max Pain 来自 SPY 期权按比例换算。这是结构估计，不是保证。'
 )
@@ -711,7 +712,13 @@ def _net_near_gex(by, magnet, em):
 
 
 def blend_close_estimate(spot, levels, by=None, iv=None, now=None, asof_ts=None, scale_note=None):
-    """Blend RTH spot, GEX magnet, Max Pain and dyn_pivot/POC into a close estimate."""
+    """Blend RTH spot, GEX magnet, Max Pain and dyn_pivot/POC into a close estimate.
+
+    When spot is strictly below the gamma flip (zero_gamma), Max Pain, the GEX
+    magnet and other structure weights are dropped. The estimate is spot, and
+    the 50%/75% bands are the expected-move range around spot. At or above the
+    flip, or if the flip is missing, the existing structure blend is kept.
+    """
     now = now or datetime.now(ET)
     t_rem, t_sess, in_rth = _session_remaining(now)
     # expected move to the coming RTH close
@@ -728,38 +735,49 @@ def blend_close_estimate(spot, levels, by=None, iv=None, now=None, asof_ts=None,
             max_pain = None
     pivot = (levels or {}).get('dyn_pivot') or (levels or {}).get('poc')
     pivot_name = '动态支点' if (levels or {}).get('dyn_pivot') is not None else 'POC'
+    zero_gamma = (levels or {}).get('zero_gamma')
+    below_flip = zero_gamma is not None and float(spot) < float(zero_gamma)
 
     net_near, tot_gex = _net_near_gex(by or {}, magnet, em_close)
     pin_scale = 0.55 if net_near < 0 else 1.0
 
-    w_spot0 = _spot_weight(t_rem, t_sess)
-    w_struct_budget = (1.0 - w_spot0) * pin_scale
-    w_spot = 1.0 - w_struct_budget
-
-    parts = [
-        ('GEX 核心磁铁', 'magnet', magnet, _dist_decay(spot, magnet, em_close), 1.0),
-        ('Max Pain', 'max_pain', max_pain, _dist_decay(spot, max_pain, em_close), 1.0),
-        (pivot_name, 'pivot', pivot, _dist_decay(spot, pivot, em_close), 0.5),
-    ]
-    raw = [(n, k, v, d * base) for n, k, v, d, base in parts if v is not None and d * base > 1e-9]
-    sraw = sum(r[3] for r in raw)
-    components = [{'name': '现价', 'key': 'spot', 'value': round(float(spot), 2),
-                   'weight': round(w_spot, 4), 'decay': 1.0}]
-    if sraw <= 0 or w_struct_budget <= 0:
+    if below_flip:
+        # Spot is below the gamma flip: pin/structure terms are unreliable.
+        # Use spot as the estimate and keep the expected-move bands around it.
         w_spot = 1.0
-        components[0]['weight'] = 1.0
+        pin_scale = 1.0
+        components = [{'name': '现价', 'key': 'spot', 'value': round(float(spot), 2),
+                       'weight': 1.0, 'decay': 1.0}]
         est = float(spot)
     else:
-        est = w_spot * float(spot)
-        for n, k, v, rw in raw:
-            w = w_struct_budget * (rw / sraw)
-            components.append({'name': n, 'key': k, 'value': round(float(v), 2),
-                               'weight': round(w, 4), 'decay': round(rw, 4)})
-            est += w * float(v)
-        # leftover rounding to spot
-        wsum = sum(c['weight'] for c in components)
-        if abs(wsum - 1) > 1e-6:
-            components[0]['weight'] = round(components[0]['weight'] + (1 - wsum), 4)
+        w_spot0 = _spot_weight(t_rem, t_sess)
+        w_struct_budget = (1.0 - w_spot0) * pin_scale
+        w_spot = 1.0 - w_struct_budget
+
+        parts = [
+            ('GEX 核心磁铁', 'magnet', magnet, _dist_decay(spot, magnet, em_close), 1.0),
+            ('Max Pain', 'max_pain', max_pain, _dist_decay(spot, max_pain, em_close), 1.0),
+            (pivot_name, 'pivot', pivot, _dist_decay(spot, pivot, em_close), 0.5),
+        ]
+        raw = [(n, k, v, d * base) for n, k, v, d, base in parts if v is not None and d * base > 1e-9]
+        sraw = sum(r[3] for r in raw)
+        components = [{'name': '现价', 'key': 'spot', 'value': round(float(spot), 2),
+                       'weight': round(w_spot, 4), 'decay': 1.0}]
+        if sraw <= 0 or w_struct_budget <= 0:
+            w_spot = 1.0
+            components[0]['weight'] = 1.0
+            est = float(spot)
+        else:
+            est = w_spot * float(spot)
+            for n, k, v, rw in raw:
+                w = w_struct_budget * (rw / sraw)
+                components.append({'name': n, 'key': k, 'value': round(float(v), 2),
+                                   'weight': round(w, 4), 'decay': round(rw, 4)})
+                est += w * float(v)
+            # leftover rounding to spot
+            wsum = sum(c['weight'] for c in components)
+            if abs(wsum - 1) > 1e-6:
+                components[0]['weight'] = round(components[0]['weight'] + (1 - wsum), 4)
 
     lo50, hi50 = est - 0.67 * em_close, est + 0.67 * em_close
     lo75, hi75 = est - 1.15 * em_close, est + 1.15 * em_close
@@ -776,6 +794,9 @@ def blend_close_estimate(spot, levels, by=None, iv=None, now=None, asof_ts=None,
         'w_spot': round(w_spot, 4),
         'pin_scale': pin_scale,
         'net_near_gex': round(net_near, 2),
+        'blend_mode': 'spot_em' if below_flip else 'structure',
+        'below_zero_gamma': below_flip,
+        'zero_gamma': None if zero_gamma is None else round(float(zero_gamma), 2),
         't_remaining_sec': int(t_rem),
         't_session_sec': int(t_sess),
         'in_rth': in_rth,
