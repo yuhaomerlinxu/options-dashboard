@@ -217,7 +217,11 @@ function render(d){
   $('estv').textContent=px(est.estimate!=null?est.estimate:d.target, 2);
   $('esttip').textContent=est.formula||'';
   const wr=est.in_rth?'盘中':'非盘中，按整段交易时段尚未开始';
+  const src=(est.chain_source==='futu'||d.chain_source==='futu')?'富途 OpenAPI SPX/SPXW':(est.chain_source||d.chain_source||'');
+  const pbj=est.pushed_bj||d.pushed_bj||'';
   $('estmeta').textContent=(est.asof_bj?('数据 '+est.asof_bj+' 北京 / '+(est.asof_et||'')):'')
+    +(pbj?('　推送 '+pbj+' 北京时间'):'')
+    +(src?('　来源 '+src):'')
     +(est.em_close!=null?('　收盘前预期波动 ±'+px(est.em_close,2)):'')
     +(est.atm_iv!=null?('　IV '+(100*est.atm_iv).toFixed(1)+'%'):'')
     +'　'+wr;

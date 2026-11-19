@@ -33,3 +33,24 @@ Market data only: `providers.lb()` whitelists `quote`, `option chain`, `option q
 Background threads in the container: radar scheduler, chart/spread prewarm, and `qqq/monitor.py` (supervised subprocess, writes `qqq/alerts.jsonl`). Radar output lives in `qqq/radar_data/` (ephemeral on Render).
 
 Free plan sleeps after inactivity; first request after idle takes ~1 min.
+
+
+## SPX forecast data (Futu, pushed from the box)
+
+Render cannot reach Futu OpenD (`127.0.0.1:11111` on the box). The box
+computes the SPX close estimate, GEX, gamma flip, walls, ATM IV and
+straddle move from a live Futu SPX/SPXW chain (spot still from
+Longbridge `.SPX.US`) and POSTs a snapshot to
+`/api/strategy/spx_snapshot` with `Authorization: Bearer $DASH_TOKEN`.
+
+`/strategy/data` (SPX) and `/api/strategy/close_estimate` use that
+snapshot while it is fresh (15 minutes during US RTH, up to 5 days
+off-hours) and show the source plus a Beijing (`Asia/Shanghai`)
+timestamp. If the snapshot is stale or missing, the existing SPY-scaled
+Longbridge path is used.
+
+The box pusher is `qqq/push_spx_snapshot.py`, supervised by
+`/workspace/bin/ensure-spx-pusher.sh` (restartable; every 3 minutes
+during the US session, every 15 minutes off-hours). OpenD must stay
+logged in on the box. This service is market-data only and never places
+orders.

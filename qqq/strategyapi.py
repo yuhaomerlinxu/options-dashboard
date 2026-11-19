@@ -711,7 +711,7 @@ def _net_near_gex(by, magnet, em):
     return net, tot
 
 
-def blend_close_estimate(spot, levels, by=None, iv=None, now=None, asof_ts=None, scale_note=None):
+def blend_close_estimate(spot, levels, by=None, iv=None, now=None, asof_ts=None, scale_note=None, em_close_override=None):
     """Blend RTH spot, GEX magnet, Max Pain and dyn_pivot/POC into a close estimate.
 
     When spot is strictly below the gamma flip (zero_gamma), Max Pain, the GEX
@@ -726,6 +726,14 @@ def blend_close_estimate(spot, levels, by=None, iv=None, now=None, asof_ts=None,
     em_daily = _em(spot, iv, 1) if iv else None
     frac = math.sqrt(t_rem / t_sess) if t_sess else 1.0
     em_close = (em_daily * frac) if em_daily else (abs(spot) * 0.006)
+    # Optional override from an ATM-straddle implied move (Futu / real SPX chain).
+    if em_close_override is not None:
+        try:
+            ov = float(em_close_override)
+            if ov > 0:
+                em_close = ov
+        except (TypeError, ValueError):
+            pass
     magnet = (levels or {}).get('core_magnet')
     max_pain = (levels or {}).get('max_pain')
     # Max Pain at the edge of the fetched strike window is usually an artifact of a truncated chain.
@@ -945,11 +953,74 @@ def _cli_or_sdk(cli_fn, sdk_fn):
             raise cli_err
 
 
+def _levels_payload(levels):
+    return {
+        'core_magnet': levels.get('core_magnet'),
+        'max_pain': levels.get('max_pain'),
+        'dyn_pivot': levels.get('dyn_pivot'),
+        'poc': levels.get('poc'),
+        'zero_gamma': levels.get('zero_gamma'),
+        'support': levels.get('support'),
+        'resist': levels.get('resist'),
+        'call_wall': levels.get('call_wall'),
+        'put_wall': levels.get('put_wall'),
+    }
+
+
+def _try_futu_spx(spot):
+    """Read-only Futu SPX/SPXW chain. Returns a loader dict or None on any failure."""
+    try:
+        import futu_spx as F
+        if not F.opend_reachable():
+            return None
+        data = F.load_spx_chain(spot=spot)
+    except Exception:
+        return None
+    if not data or data.get('error') or not data.get('by'):
+        return None
+    return data
+
+
+def _futu_levels_and_by(last, bars, futu, expiry=None):
+    """Build strategyapi levels / by from a Futu load_spx_chain result."""
+    by = futu['by']
+    nused = futu.get('n_used') or len(by)
+    expiry = expiry or futu.get('nearest_expiry')
+    exps = futu.get('expiries') or ([expiry] if expiry else [])
+    pain_rows = [{
+        'strike_price': qq['strike'],
+        'direction': qq['cp'],
+        'open_interest': qq.get('oi') or 0,
+    } for qq in (futu.get('quotes') or []) if qq.get('strike')]
+    mp = _max_pain(pain_rows, 1.0)
+    profile = _profile(bars, 1.0)
+    levels = _levels_from(by, last, profile, mp)
+    if futu.get('zero_gamma') is not None:
+        levels['zero_gamma'] = futu['zero_gamma']
+    levels['call_wall'] = futu.get('call_wall')
+    levels['put_wall'] = futu.get('put_wall')
+    iv = futu.get('atm_iv')
+    return by, nused, expiry, exps, levels, iv, profile
+
+
+def _fresh_pushed(expiry=None):
+    """Return a fresh Futu snapshot pushed by the box, or None."""
+    try:
+        import spx_snapshot as S
+        return S.get_fresh(expiry=expiry)
+    except Exception:
+        return None
+
+
 def close_estimate(sym='SPX', expiry=None):
     """Fetch market data (same caches as /strategy) and return a close-estimate dict.
 
     Prefers lbsafe/Longbridge CLI (as on Render). If the CLI is unavailable, falls
     back to the official Longport Python SDK using LONGPORT_* env vars. Read-only.
+
+    For SPX, a Futu OpenD chain (real SPXW/SPX index options, cash-index spot still
+    from Longbridge .SPX.US) is tried first. If Futu is down or not entitled, the
+    existing SPY-scaled Longbridge path is used unchanged.
     """
     spec = resolve(sym)
     rth = _rth_now()
@@ -963,6 +1034,56 @@ def close_estimate(sym='SPX', expiry=None):
     if rth:
         last = q['last']
     last_t = bars[-1]['t'] if bars else int(time.time())
+
+    if spec['id'] == 'SPX':
+        futu = _try_futu_spx(last)
+        if futu:
+            import futu_spx as F
+            scale_note = 'SPX 期权来自富途 OpenAPI（SPXW/SPX），现价来自长桥 .SPX.US'
+            by = futu['by']
+            nused = futu.get('n_used') or len(by)
+            expiry = expiry or futu.get('nearest_expiry')
+            exps = futu.get('expiries') or ([expiry] if expiry else [])
+            pain_rows = [{
+                'strike_price': qq['strike'],
+                'direction': qq['cp'],
+                'open_interest': qq.get('oi') or 0,
+            } for qq in (futu.get('quotes') or []) if qq.get('strike')]
+            mp = _max_pain(pain_rows, 1.0)
+            profile = _profile(bars, 1.0)
+            levels = _levels_from(by, last, profile, mp)
+            if futu.get('zero_gamma') is not None:
+                levels['zero_gamma'] = futu['zero_gamma']
+            levels['call_wall'] = futu.get('call_wall')
+            levels['put_wall'] = futu.get('put_wall')
+            iv = futu.get('atm_iv')
+            est = blend_close_estimate(
+                last, levels, by, iv, asof_ts=last_t, scale_note=scale_note,
+                em_close_override=futu.get('em_close'))
+            st = futu.get('straddle') or {}
+            est.update({
+                'symbol': spec['label'],
+                'expiry': expiry,
+                'exps': exps,
+                'n_quotes': nused,
+                'levels': _levels_payload(levels),
+                'prev_close': q.get('prev_close'),
+                'source': 'futu-spx+longbridge-spot',
+                'chain_source': 'futu',
+                'call_wall': levels.get('call_wall'),
+                'put_wall': levels.get('put_wall'),
+                'straddle_move': st.get('implied_move'),
+                'straddle_one_sigma': st.get('one_sigma_move'),
+                'em_note': futu.get('em_note'),
+                'gex_by_strike': F.gex_rows(by),
+                'gex_convention': futu.get('gex_convention') or F.GEX_CONVENTION_SHORT,
+            })
+            return est
+        snap = _fresh_pushed(expiry)
+        if snap and snap.get('close_estimate'):
+            import spx_snapshot as S
+            return S.annotate_estimate(snap['close_estimate'], snap)
+
     if spec['scale'] == 'spy':
         spy = _cli_or_sdk(
             lambda: E._cached('st-q-spy', _ttl(5, 60), lambda: E._quote('SPY.US')),
@@ -995,17 +1116,10 @@ def close_estimate(sym='SPX', expiry=None):
         'expiry': expiry,
         'exps': exps,
         'n_quotes': nused,
-        'levels': {
-            'core_magnet': levels.get('core_magnet'),
-            'max_pain': levels.get('max_pain'),
-            'dyn_pivot': levels.get('dyn_pivot'),
-            'poc': levels.get('poc'),
-            'zero_gamma': levels.get('zero_gamma'),
-            'support': levels.get('support'),
-            'resist': levels.get('resist'),
-        },
+        'levels': _levels_payload(levels),
         'prev_close': q.get('prev_close'),
         'source': 'longbridge-cli-or-sdk',
+        'chain_source': 'spy-proxy' if spec['scale'] == 'spy' else 'longbridge',
     })
     return est
 
@@ -1038,21 +1152,39 @@ def payload(sym='QQQ', expiry=None):
     spot_opt = spy_q['last'] if spec['scale'] == 'spy' else last
     scale = (last / spot_opt) if spec['scale'] == 'spy' else 1.0
 
-    exps = E._cached(('st-exps', spec['opt']), _ttl(60, 1800), lambda: _exps(spec['opt']))
-    if not expiry or expiry not in exps:
-        expiry = exps[0] if exps else None
-    if not expiry:
-        return {'error': '没有可用的未到期期权', 'symbol': spec['label']}
+    used_futu = False
+    futu_em_override = None
+    if spec['id'] == 'SPX':
+        futu = _try_futu_spx(last)
+        if futu:
+            used_futu = True
+            scale = 1.0
+            spot_opt = last
+            by, nused, expiry, exps, levels, iv, profile = _futu_levels_and_by(last, bars, futu, expiry)
+            futu_em_override = futu.get('em_close')
+            T = None
+        else:
+            snap = _fresh_pushed(expiry)
+            if snap and snap.get('payload'):
+                import spx_snapshot as S
+                return S.annotate_payload(snap['payload'], snap)
 
-    def chain():
-        return _option_quotes(spec['opt'], expiry, spot_opt, 0.10)
-    rows, raw_ks = E._cached(('st-opt', spec['id'], expiry), _ttl(60, 1800), chain)
-    by, nused, T = _greeks(rows, spot_opt, expiry, scale)
-    # scale greeks already applied to keys; totals need no extra scale except strike labels
-    mp = _max_pain(rows, scale)
-    profile = _profile(bars, 1.0 if spec['id'] == 'SPX' else 0.25)
-    levels = _levels_from(by, last, profile, mp)
-    iv = _atm_iv(by, last)
+    if not used_futu:
+        exps = E._cached(('st-exps', spec['opt']), _ttl(60, 1800), lambda: _exps(spec['opt']))
+        if not expiry or expiry not in exps:
+            expiry = exps[0] if exps else None
+        if not expiry:
+            return {'error': '没有可用的未到期期权', 'symbol': spec['label']}
+
+        def chain():
+            return _option_quotes(spec['opt'], expiry, spot_opt, 0.10)
+        rows, raw_ks = E._cached(('st-opt', spec['id'], expiry), _ttl(60, 1800), chain)
+        by, nused, T = _greeks(rows, spot_opt, expiry, scale)
+        # scale greeks already applied to keys; totals need no extra scale except strike labels
+        mp = _max_pain(rows, scale)
+        profile = _profile(bars, 1.0 if spec['id'] == 'SPX' else 0.25)
+        levels = _levels_from(by, last, profile, mp)
+        iv = _atm_iv(by, last)
     # dte trading days
     close = datetime.fromisoformat(expiry + 'T16:00:00').replace(tzinfo=ET)
     dte_td = max(int(round((close.date() - datetime.now(ET).date()).days * 5 / 7)) or 1, 1)
@@ -1120,7 +1252,10 @@ def payload(sym='QQQ', expiry=None):
         'symbol': spec['label'],
         'bar_symbol': spec['bar'],
         'opt_symbol': spec['opt'],
-        'approx': 'SPY期权按 SPX/SPY=%.4f 换算' % scale if spec['scale'] else None,
+        'approx': (
+            'SPX 期权来自富途 OpenAPI（SPXW/SPX），现价来自长桥 .SPX.US' if used_futu
+            else ('SPY期权按 SPX/SPY=%.4f 换算' % scale if spec['scale'] else None)
+        ),
         'expiry': expiry,
         'exps': exps,
         'last': round(last, 2),
@@ -1145,10 +1280,22 @@ def payload(sym='QQQ', expiry=None):
         'history_note': history_note,
         'compass': compass,
         'n_contracts': nused,
+        'chain_source': 'futu' if used_futu else ('spy-proxy' if spec['scale'] == 'spy' else 'longbridge'),
+        'call_wall': levels.get('call_wall'),
+        'put_wall': levels.get('put_wall'),
+        'close_estimate': blend_close_estimate(
+            last, levels, by, iv, asof_ts=last_t, scale_note=(
+                'SPX 期权来自富途 OpenAPI（SPXW/SPX），现价来自长桥 .SPX.US' if used_futu
+                else ('SPY期权按 SPX/SPY=%.4f 换算' % scale if spec['scale'] else None)
+            ), em_close_override=futu_em_override),
         'source': {
             'spot': 'Longbridge %s 报价与1分钟K线（RTH）' % spec['bar'],
-            'gex': 'Longbridge 期权链 OI × Black-Scholes Gamma × 100 × spot，Call 为正、Put 为负'
-                   + ('；SPX 用 SPY 期权换算' if spec['scale'] else ''),
+            'gex': (
+                '富途 OpenAPI SPX/SPXW 期权链 OI × Gamma × 100 × spot，Call 为正、Put 为负'
+                if used_futu else
+                ('Longbridge 期权链 OI × Black-Scholes Gamma × 100 × spot，Call 为正、Put 为负'
+                 + ('；SPX 用 SPY 期权换算' if spec['scale'] else ''))
+            ),
             'gex_vol': '同上，但用当日已成交量代替 OI（日内累计，不是逐笔订单流）',
             'dex': 'OI × BS Delta × 100 × spot',
             'flow': '右侧订单流用各行权价 GEX-by-Vol 近似，不是逐笔期权成交。盘中行权价成交量差分从下一交易日开始积累。',
@@ -1264,6 +1411,27 @@ def fly_payload(sym='SPX', expiry=None, center=None, wing=None, typ='auto'):
     close_est = blend_close_estimate(last, levels, by, iv_est, asof_ts=last_t_est, scale_note=scale_note)
     close_est['symbol'] = spec['label']
     close_est['expiry'] = expiry
+    if spec['id'] == 'SPX':
+        futu = _try_futu_spx(last)
+        if futu:
+            f_by, _, f_exp, _, f_levels, f_iv, _ = _futu_levels_and_by(last, bars, futu, expiry)
+            close_est = blend_close_estimate(
+                last, f_levels, f_by, f_iv, asof_ts=last_t_est,
+                scale_note='SPX 期权来自富途 OpenAPI（SPXW/SPX），现价来自长桥 .SPX.US',
+                em_close_override=futu.get('em_close'))
+            close_est['symbol'] = spec['label']
+            close_est['expiry'] = f_exp or expiry
+            close_est['chain_source'] = 'futu'
+            close_est['source'] = 'futu-spx+longbridge-spot'
+            close_est['call_wall'] = f_levels.get('call_wall')
+            close_est['put_wall'] = f_levels.get('put_wall')
+            st = futu.get('straddle') or {}
+            close_est['straddle_move'] = st.get('implied_move')
+        else:
+            snap = _fresh_pushed(expiry)
+            if snap and snap.get('close_estimate'):
+                import spx_snapshot as S
+                close_est = S.annotate_estimate(snap['close_estimate'], snap)
     target = close_est['estimate']
     # default selection: cheaper fly at center nearest target, smallest available wing
     def pick_default():

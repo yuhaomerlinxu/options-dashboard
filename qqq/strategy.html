@@ -438,13 +438,27 @@ function render(d){
      <div class="card"><h3>尾盘10分钟 ${tip('', (d.tips&&d.tips.tail)||'')}</h3><div class="v" style="font-size:16px">${h.tail_text||'—'}</div><div class="s">锁价参考 ${px(h.tail_anchor)}</div></div>
      <div class="card"><h3>Gamma 挤压点火 ${tip('', (d.tips&&d.tips.squeeze)||'')}</h3><div class="v" style="font-size:16px">${h.squeeze||'—'}</div><div class="s">强度 ${h.squeeze_pct||0}%</div></div>`;
   $('stitle').textContent=d.symbol+' 收盘结构地图';
-  $('stmeta').innerHTML='到期 '+d.expiry+(d.approx?' <span class="badge">'+d.approx+'</span>':'')+'　最新 '+(d.asof_et||'');
+  const est=d.close_estimate||{};
+  const srcBits=[
+    d.approx,
+    d.chain_source==='futu'?'数据源：富途 OpenAPI SPX/SPXW':(d.chain_source?('数据源：'+d.chain_source):''),
+    d.pushed_bj?('推送 '+d.pushed_bj+' 北京时间'):(est.pushed_bj?('推送 '+est.pushed_bj+' 北京时间'):''),
+    est.computed_bj && !d.pushed_bj?('计算 '+est.computed_bj+' 北京时间'):'',
+    est.asof_bj?('数据截至 '+est.asof_bj+' 北京时间'):''
+  ].filter(Boolean);
+  $('stmeta').innerHTML='到期 '+d.expiry+(srcBits.length?' <span class="badge">'+srcBits[0]+'</span>':'')+'　最新 '+(d.asof_et||'')+(srcBits.slice(1).length?'　'+srcBits.slice(1).join('　'):'');
   const cls=x=>x==null?'—':px(x);
-  $('st6').innerHTML =
-    [['实时 Spot',cls(d.last)],['结构支撑',cls(L.support)],['结构阻力',cls(L.resist)],
-     ['收盘预测 Phase-A',cls(h.phase_a)+(h.phase_a_time?' @ '+h.phase_a_time:'')],
-     ['收盘预测 Phase-B',cls(h.phase_b)],
-     ['大概率收盘区', (h.close_zone?px(h.close_zone[0])+' – '+px(h.close_zone[1]):'—')]]
+  const stRows=[['实时 Spot',cls(d.last)],['结构支撑',cls(L.support)],['结构阻力',cls(L.resist)]];
+  if(est.estimate!=null){
+    stRows.push(['收盘预估',cls(est.estimate)]);
+    stRows.push(['50% 区间', est.range_50?px(est.range_50[0])+' – '+px(est.range_50[1]):'—']);
+    stRows.push(['75% 区间', est.range_75?px(est.range_75[0])+' – '+px(est.range_75[1]):'—']);
+  }else{
+    stRows.push(['收盘预测 Phase-A',cls(h.phase_a)+(h.phase_a_time?' @ '+h.phase_a_time:'')]);
+    stRows.push(['收盘预测 Phase-B',cls(h.phase_b)]);
+    stRows.push(['大概率收盘区', (h.close_zone?px(h.close_zone[0])+' – '+px(h.close_zone[1]):'—')]);
+  }
+  $('st6').innerHTML = stRows
     .map(a=>`<div class="card"><h3>${a[0]}</h3><div class="v" style="font-size:18px">${a[1]}</div></div>`).join('');
   $('gexleg').innerHTML=`Zero Gamma ${cls(L.zero_gamma)}　Major + ${cls(L.major_pos)}　Major − ${cls(L.major_neg)}　GEX by Vol ${money(L.gex_vol_total)}　GEX by OI ${money(L.gex_oi_total)}`;
   const mc=(d.maxchg||[]).map(r=>`<tr><td>${r.window}</td><td>${px(r.k)}</td><td>${r.gex==null?'—':money(r.gex)}</td></tr>`).join('');
@@ -501,7 +515,7 @@ function render(d){
     </div>`).join('')
     +`<div class="s" style="margin-top:8px">当前观察条件　<b>${C.condition||'—'}</b></div>
       <div class="note">${(C.formulas&&C.formulas.watch)||''}</div>`;
-  const notes=[d.history_note, d.source&&d.source.gex, d.source&&d.source.flow, d.source&&d.source.weights, '自动刷新：常规时段约 12 秒。'].filter(Boolean);
+  const notes=[d.history_note, d.source&&d.source.gex, d.source&&d.source.pushed, d.source&&d.source.asof, d.source&&d.source.flow, d.source&&d.source.weights, '自动刷新：常规时段约 12 秒。'].filter(Boolean);
   $('notes').textContent=notes.join('  ·  ');
   requestAnimationFrame(()=>{ drawSpotGex($('gexCv'), d, 'gex'); drawSpotGex($('flowCv'), d, 'flow'); drawTS($('tsCv'), d); drawCand($('candCv'), d); drawSmile($('smileCv'), d); renderTree(d); });
 }

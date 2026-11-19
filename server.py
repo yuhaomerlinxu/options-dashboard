@@ -144,6 +144,11 @@ class H(qqqapp.Mixin, SimpleHTTPRequestHandler):
             a, _, b = c.strip().partition("=")
             if a == "dash_key" and hmac.compare_digest(b, TOKEN): return True
         h = s.headers.get("Authorization") or ""
+        if h.startswith("Bearer "):
+            try:
+                tok = h.split(" ", 1)[1].strip()
+                if hmac.compare_digest(tok, TOKEN): return True
+            except Exception: pass
         if h.startswith("Basic "):
             try:
                 pw = base64.b64decode(h[6:]).decode().split(":", 1)[-1]
@@ -196,6 +201,12 @@ class H(qqqapp.Mixin, SimpleHTTPRequestHandler):
             finally: subs.remove(q)
             return
         return super().do_GET()
+    def do_POST(s):
+        if not s.auth(): return
+        p = s.path.split("?")[0]
+        if p in ("/api/strategy/spx_snapshot", "/strategy/spx_snapshot"):
+            return s.qqq_post()
+        b = b"not found"; s.send_response(404); s.send_header("Content-Length", len(b)); s.end_headers(); s.wfile.write(b)
     def log_message(s, *a): pass
 if __name__ == "__main__":
     for f in (feed_loop, market_loop): threading.Thread(target=f, daemon=True).start()

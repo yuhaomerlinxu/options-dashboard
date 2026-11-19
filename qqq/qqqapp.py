@@ -174,6 +174,33 @@ class Mixin:
         except Exception as e:
             try:self.send(500,json.dumps({'error':'server: %s'%e}).encode(),'application/json')
             except Exception:pass
+    def qqq_post(self):
+        try:self._post()
+        except (BrokenPipeError,ConnectionResetError):pass
+        except Exception as e:
+            try:self.send(500,json.dumps({'ok':False,'error':'server: %s'%e}).encode(),'application/json')
+            except Exception:pass
+    def _post(self):
+        p=self.path.split('?')[0].rstrip('/')
+        if p in ('/api/strategy/spx_snapshot','/strategy/spx_snapshot'):
+            try:
+                n=int(self.headers.get('Content-Length') or 0)
+            except (TypeError,ValueError):
+                n=0
+            if n<=0 or n>2000000:
+                self.send(400,json.dumps({'ok':False,'error':'bad content-length'}).encode(),'application/json; charset=utf-8');return
+            raw=self.rfile.read(n)
+            try:
+                doc=json.loads(raw)
+            except Exception:
+                self.send(400,json.dumps({'ok':False,'error':'invalid json'}).encode(),'application/json; charset=utf-8');return
+            try:
+                import spx_snapshot
+                r=spx_snapshot.ingest(doc)
+            except Exception as e:
+                r={'ok':False,'error':str(e)}
+            self.send(200 if r.get('ok') else 400,json.dumps(r,ensure_ascii=False,default=str).encode(),'application/json; charset=utf-8');return
+        self.send(404,b'not found','text/plain')
     def _get(self):
         p=self.path.split('?')[0].rstrip('/')
         if p=='/funds':self.send(200,FPAGE,'text/html; charset=utf-8');return
@@ -194,6 +221,13 @@ class Mixin:
                 r=strategyapi.payload(sy, ex)
             except Exception as e:
                 r={'error':str(e)}
+            self.send(200,json.dumps(r,ensure_ascii=False,default=str).encode(),'application/json; charset=utf-8');return
+        if p in ('/api/strategy/spx_snapshot','/strategy/spx_snapshot'):
+            try:
+                import spx_snapshot
+                r=spx_snapshot.status()
+            except Exception as e:
+                r={'present':False,'fresh':False,'error':str(e)}
             self.send(200,json.dumps(r,ensure_ascii=False,default=str).encode(),'application/json; charset=utf-8');return
         if p in ('/api/strategy/close_estimate','/strategy/close_estimate'):
             qs=parse_qs(urlparse(self.path).query)
