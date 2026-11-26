@@ -1,25 +1,40 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>SPX 位移位看板</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#0e1117;color:#e6edf3;font:14px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+*{box-sizing:border-box}body{margin:0;background:#0b0d10;color:#e6edf3;font:14px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
 header{padding:10px 12px 6px;border-bottom:1px solid #1e2630}
 .row{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px 12px}
 h1{font-size:15px;margin:0;font-weight:700;letter-spacing:.02em}
 .px{font-size:28px;font-weight:700}.up{color:#3ddc97}.dn{color:#ff5c7a}
 .sub{font-size:12px;color:#8b98a9}#st{margin-left:auto;font-size:11px;color:#8b98a9}
-.ch{width:100%;height:52vh;min-height:320px;background:#0e1117}
+.stage{position:relative;width:100%;height:58vh;min-height:360px;background:#0b0d10;overflow:hidden}
+.ch{position:absolute;inset:0}
+.ov{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.offbar{position:absolute;left:8px;right:56px;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;font-weight:600;z-index:3;pointer-events:none}
+.offbar.top{top:8px}.offbar.bot{bottom:8px}
+.offbar .it{white-space:nowrap;text-shadow:0 1px 2px #000}
+.offbar .more{color:#9aa7b4;font-weight:500}
+.lbl{position:absolute;transform:translate(0,-50%);font-size:11px;font-weight:600;white-space:nowrap;text-shadow:0 1px 3px #000,0 0 6px #000;z-index:2}
+.lbl .plus{color:#ffd54f;margin-left:3px}
+.pill{position:absolute;transform:translate(-50%,-50%);font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.02em;z-index:4;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.pill.buy{background:#1faa5c;color:#fff}
+.pill.exit{background:#5c6570;color:#e8edf2}
+.banner{position:absolute;transform:translate(-50%,0);background:#1faa5c;color:#fff;font-size:12px;font-weight:800;padding:5px 12px;border-radius:8px;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.45);white-space:nowrap}
+.ring{position:absolute;border:2.5px solid #f5d76e;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 1px rgba(0,0,0,.35);z-index:3}
+.bubble{position:absolute;transform:translate(-50%,-50%);background:#1a1d22;color:#e8edf2;border:1.5px solid #c5ccd4;border-radius:50%;width:26px;height:26px;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;z-index:4;box-shadow:0 1px 4px #000}
+.gdot{position:absolute;width:9px;height:9px;border-radius:50%;background:#1faa5c;border:1.5px solid #0b0d10;transform:translate(-50%,-50%);z-index:3}
 .list{padding:8px 10px 4px;display:flex;flex-direction:column;gap:3px}
 .lv{display:flex;align-items:baseline;gap:8px;font-size:12px;padding:3px 4px;border-radius:4px}
 .lv .dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px;margin-top:3px}
 .lv .nm{flex:1;min-width:0}.lv .pr{font-variant-numeric:tabular-nums;font-weight:600}
 .lv .ds{font-variant-numeric:tabular-nums;color:#8b98a9;width:64px;text-align:right}
-.lv.off .nm,.lv.off .pr{color:#8b98a9}
+.lv.off{display:none}
 .plus{color:#ffd54f;font-size:11px;margin-left:4px}
 .sig{padding:8px 12px;border-top:1px solid #1e2630}
 .sig b{display:block;margin-bottom:4px}
 .sg{font-size:12px;padding:3px 0;color:#c5d0da}
 .sg .buy{color:#3ddc97;font-weight:700}.sg .exit{color:#ff5c7a;font-weight:700}
-.rule{margin:8px 12px 48px;padding:10px 12px;background:#161b22;border:1px solid #1e2630;border-radius:8px;font-size:11px;color:#9aa7b4;line-height:1.65}
+.rule{margin:8px 12px 48px;padding:10px 12px;background:#14181e;border:1px solid #1e2630;border-radius:8px;font-size:11px;color:#9aa7b4;line-height:1.7}
 .rule b{color:#c5d0da}
 a{color:#7cb7ff}
 </style></head><body>
@@ -27,107 +42,202 @@ a{color:#7cb7ff}
   <div class="row"><h1>SPX 位移位</h1><span class="sub">5分钟 · .SPX.US</span><span id="st">加载中…</span></div>
   <div class="row" style="margin-top:4px"><span class="px" id="px">—</span><span id="chg"></span><span class="sub" id="meta"></span></div>
 </header>
-<div class="ch" id="ch"></div>
+<div class="stage" id="stage">
+  <div class="ch" id="ch"></div>
+  <div class="offbar top" id="offTop"></div>
+  <div class="ov" id="ov"></div>
+  <div class="offbar bot" id="offBot"></div>
+</div>
 <div class="list" id="list"></div>
 <div class="sig" id="sig"></div>
 <div class="rule" id="rule">
   <b>怎么算的（仅供参考，不会下单）</b><br>
-  <b>位移位：</b>每个周期找最近一次实体大于 1.5 倍 ATR(14) 的位移K线，取它的开盘价。多头位移是支撑，空头位移是阻力。周期包括 15 分钟、1 小时、4 小时、日、周、月。靠近的位会合并且标 +N。<br>
-  <b>Day + Week King：</b>已完成的上一交易日与上一自然周的典型价格 (H+L+C)/3 的均值。<b>4H</b> 是最近一根已完成 4 小时K线的 (H+L+C)/3。<br>
-  <b>σ：</b>当日成交量加权 VWAP ± 1σ；若富途近月跨式可用，再画隐含 1σ（跨式价格 / √(2/π)）。<br>
-  <b>虚线：</b>富途 SPXW 近月到期、未平仓量最大的几个看涨/看跌行权价（从这台电脑推送到看板，因为云端连不上富途）。<br>
-  <b>BUY NOW：</b>价格重新站上一条多头位移位（上一根 5 分钟收在该位下，本根收在上），同时 5 分钟 EMA9 在本根或前 3 根内上穿 EMA20，且 8 点以内还有至少一条其他关键位。目标是最接近现价的 5 点一档看涨行权价。看跌信号对称。<br>
-  <b>EXIT：</b>价格触及下一档反向关键位，或收盘重新穿越进场那条位移位。<br>
+  定义按参考图 11/25 的可见元素反推，价格都来自长桥/富途实盘，没有编造。<br>
+  <b>位移位：</b>该周期实体 ≥ k 倍 ATR(14) 的已完成K线，取实体中点 (开盘+收盘)/2，不是开盘价，也不只保留最近一根。15 分钟 k=1.0，1 小时/日/周/月 k=0.80（11/25 开盘那根 1 小时空头位移的 k 只有 0.84）。同一周期、8 点以内的位移位合并，保留更早的那条；同一方向 20 点以内只留更近的一条。每个周期最多保留最近 1–2 条多头、2–4 条空头。更长周期如果已经和更短周期标过的位在 12 点以内，就不再重复画。<br>
+  <b>标签上的 +N：</b>在 12 点以内与这条位共振的其他周期位移位、King、4H、σ 或期权行权价的条数。<br>
+  <b>Day + Week King：</b>用 5 分钟K线的典型价格 (H+L+C)/3 做时间分布（每根K线给所在 5 点价格箱 +1），取当天和当周出现次数最多的箱，用箱的下沿作为整数位（11/25 是 7,175）。这不是均价 (H+L+C)/3，也不是成交量 POC——当天成交量 POC 会落在早盘低点附近，和图上中枢不一致。当和周的箱在 12 点以内视为重合，只画一条 Day + Week King；否则分开画。<br>
+  <b>4H：</b>4 小时收盘价的 EMA8，取上一根已完成 4 小时K线的值（11/25 算出来是 7,194.55，和图上 7,195.13 差 0.58 点，按实值画，不改数）。<br>
+  <b>σ：</b>最近 3 个小时的成交量加权 VWAP ± 1σ（11/25 是 13:00–16:00 美东，−1σ = 7,157.69，对应图上 7,157 σ；全天 VWAP+1σ 是 7,164，对不上）。标签上的 +1 是共振条数，不是 +1σ 的意思。<br>
+  <b>黄线：</b>5 分钟 EMA9，不是全天 VWAP。绿点是 EMA9 拐头向上。<br>
+  <b>黄圈：</b>K线影线刺破关键位或前低/前高后，收盘收回来，视为流动性回扫/拒绝；开盘双底低点会画两个圈。黑色 +N 气泡是当天价格离开后再回来触及同一条位的次数（第 2 次起标），和标签上的周期共振 +N 不是一回事。<br>
+  <b>虚线：</b>富途 SPXW 近月到期、未平仓量最大的几个看涨/看跌行权价（从这台电脑推送，因为云端连不上富途）。<br>
+  <b>BUY NOW：</b>当天已经出现过低点回扫之后，偏向只做多。5 分钟 EMA9 由平/下拐头向上（斜率转正且大于 1 点），同时收盘重新站上附近的关键位簇，就提示买最接近的上一个整百点看涨 0DTE（11/25 约 7,018 对应 7100C）。信号时间取触发那根 5 分钟K线的收盘（11/25 是 11:25 美东；参考图标在 11:26，落在下一根K线里）。每个交易日最多一个买入信号。看跌信号对称，但当天已经回扫低点后不再给空头。进场后的浅回撤只要不跌破回扫低点就继续拿。<br>
+  <b>EXIT：</b>多单触及上方 80 点以外的主要阻力（空头位移位、King、4H、σ），15–30 点以内的位合并成一次；或者收盘跌破回扫低点。早盘没有正式买单、但第一波反弹在阻力位被拒绝时，也会标一个 EXIT（11/25 是 10:05–10:10 美东附近的 7,059）。<br>
   <a href="/">← 期权看板</a>　<a href="/qqq/m15">15分钟看板</a>
 </div>
 <script src="/qqq/static/lwc.js"></script>
 <script>
 const OFF=8*3600;
 const fmtBJ=t=>{const d=new Date((t+OFF)*1000);const p=n=>String(n).padStart(2,'0');return `${d.getUTCMonth()+1}/${d.getUTCDate()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`};
+const fmtET=t=>new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit',hour12:false}).format(new Date(t*1000));
 const etDate=t=>new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'numeric',day:'numeric'}).format(new Date(t*1000));
+const fmtPx=(x,n=2)=>x==null?'':Number(x).toLocaleString('en-US',{minimumFractionDigits:n,maximumFractionDigits:n});
 const ch=LightweightCharts.createChart(document.getElementById('ch'),{
   autoSize:true,
-  layout:{background:{color:'#0e1117'},textColor:'#9aa7b4',fontSize:11},
+  layout:{background:{color:'#0b0d10'},textColor:'#9aa7b4',fontSize:11},
   grid:{vertLines:{color:'#161c25'},horzLines:{color:'#161c25'}},
-  rightPriceScale:{borderColor:'#1e2630',scaleMargins:{top:0.06,bottom:0.04}},
-  timeScale:{borderColor:'#1e2630',timeVisible:true,secondsVisible:false,rightOffset:6},
+  rightPriceScale:{borderColor:'#1e2630',scaleMargins:{top:0.08,bottom:0.08}},
+  timeScale:{borderColor:'#1e2630',timeVisible:true,secondsVisible:false,rightOffset:8},
   crosshair:{mode:0},
   localization:{locale:'zh-CN',timeFormatter:t=>fmtBJ(t-OFF)},
   handleScale:{axisPressedMouseMove:true},handleScroll:{vertTouchDrag:false}
 });
 const bg=ch.addHistogramSeries({priceScaleId:'bg',priceLineVisible:false,lastValueVisible:false,priceFormat:{type:'volume'}});
 ch.priceScale('bg').applyOptions({scaleMargins:{top:0,bottom:0},visible:false});
-const cs=ch.addCandlestickSeries({upColor:'#3ddc97',downColor:'#ff5c7a',borderVisible:false,wickUpColor:'#3ddc97',wickDownColor:'#ff5c7a'});
-const ema=ch.addLineSeries({color:'#7cb7ff',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});
-const vwaps=[];
+const cs=ch.addCandlestickSeries({upColor:'#cfd6dd',downColor:'#3b82f6',borderVisible:false,wickUpColor:'#cfd6dd',wickDownColor:'#3b82f6'});
+const ema=ch.addLineSeries({color:'#f5c542',lineWidth:2,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});
 const lines=[];
-function lineOf(color, dotted){
-  const ls=ch.addLineSeries({color,lineWidth:dotted?1:1,lineStyle:dotted?2:0,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false,autoscaleInfoProvider:()=>null});
+function lineOf(color, dotted, width){
+  const ls=ch.addLineSeries({color,lineWidth:width||1,lineStyle:dotted?2:0,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false,autoscaleInfoProvider:()=>null});
   lines.push(ls);return ls;
 }
-let fit=true;
+let fit=true, lastDoc=null;
+function offHtml(items, more, extra){
+  const bits=(items||[]).map(g=>{
+    const pts=g.dist==null?'':(Math.abs(Math.round(g.dist))+' pts');
+    const arrow=g.dist>0?'↑':'↓';
+    return `<span class="it" style="color:${g.color||'#9aa7b4'}">${arrow} ${g.name}${pts?' · '+pts:''}</span>`;
+  });
+  (extra||[]).forEach(g=>{
+    const pts=g.dist==null?'':Math.abs(Math.round(g.dist))+' pts';
+    bits.push(`<span class="it" style="color:${g.color||'#9aa7b4'}">${g.name}${pts?' '+pts:''}</span>`);
+  });
+  if(more) bits.push(`<span class="more">+${more} more</span>`);
+  return bits.join('');
+}
+function place(el,x,y){el.style.left=x+'px';el.style.top=y+'px';}
+function syncOverlays(){
+  const d=lastDoc, ov=document.getElementById('ov');
+  if(!d||!ov)return;
+  ov.innerHTML='';
+  const ts=ch.timeScale();
+  const xy=(t,px)=>{const x=ts.timeToCoordinate(t+OFF),y=cs.priceToCoordinate(px);return (x==null||y==null)?null:{x,y};};
+  // level labels (on-screen, not dotted)
+  const labels=(d.levels||[]).filter(g=>!g.offscreen && !g.dotted);
+  const placed=[];
+  for(const g of labels){
+    const y=cs.priceToCoordinate(g.px);
+    if(y==null) continue;
+    let x=16;
+    for(const p of placed){if(Math.abs(p-y)<13)x+=8;}
+    placed.push(y);
+    const div=document.createElement('div');
+    div.className='lbl';
+    div.style.color=g.color||'#c5d0da';
+    div.style.left=x+'px';
+    div.style.top=y+'px';
+    const plus=g.plus?`<span class="plus">+${g.plus}</span>`:'';
+    div.innerHTML=`${g.name}${plus}`;
+    ov.appendChild(div);
+  }
+  for(const s of (d.sweeps||[])){
+    const p=xy(s.t,s.px); if(!p) continue;
+    const r=document.createElement('div');
+    r.className='ring';
+    const size=(s.kind||'').indexOf('session-low')>=0?34:28;
+    r.style.width=size+'px';r.style.height=size+'px';
+    place(r,p.x,p.y);ov.appendChild(r);
+  }
+  for(const t of (d.touches||[])){
+    const p=xy(t.t,t.px); if(!p) continue;
+    const b=document.createElement('div');
+    b.className='bubble';
+    b.textContent='+'+t.n;
+    place(b,p.x,p.y);ov.appendChild(b);
+  }
+  for(const t of (d.dots||[])){
+    const p=xy(t.t,t.px); if(!p) continue;
+    const b=document.createElement('div');
+    b.className='gdot';
+    place(b,p.x,p.y);ov.appendChild(b);
+  }
+  let lastBuy=null;
+  for(const s of (d.signals||[])){
+    const t=s.t_bar||s.t;
+    const p=xy(t,s.px); if(!p) continue;
+    const el=document.createElement('div');
+    if(s.side==='BUY'){
+      el.className='pill buy';
+      el.textContent=s.label||'BUY NOW';
+      place(el,p.x,p.y+28);
+      lastBuy=s;
+    }else{
+      el.className='pill exit';
+      el.textContent='EXIT';
+      place(el,p.x,p.y-18);
+    }
+    ov.appendChild(el);
+  }
+  if(lastBuy){
+    const t=lastBuy.t_bar||lastBuy.t;
+    const p=xy(t,lastBuy.px);
+    if(p){
+      const bn=document.createElement('div');
+      bn.className='banner';
+      bn.textContent=lastBuy.banner||('BUY NOW — '+(lastBuy.label||''));
+      // sit under the buy area, clamped inside the chart
+      const y=Math.min(ov.clientHeight-28, Math.max(p.y+70, ov.clientHeight*0.78));
+      place(bn, Math.max(90, Math.min(p.x, ov.clientWidth-90)), y);
+      bn.style.transform='translate(-50%,0)';
+      ov.appendChild(bn);
+    }
+  }
+}
 function draw(d){
+  lastDoc=d;
   const px=document.getElementById('px'),cg=document.getElementById('chg'),meta=document.getElementById('meta'),st=document.getElementById('st');
-  if(d.last!=null){px.textContent=d.last.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  if(d.last!=null){px.textContent=fmtPx(d.last);
     const up=(d.chg_pct||0)>=0;px.className='px '+(up?'up':'dn');
     cg.className=up?'up':'dn';cg.textContent=d.chg_pct!=null?((up?'+':'')+d.chg_pct.toFixed(2)+'%'):'';}
   else {px.textContent='—';cg.textContent=d.quote_error?'行情获取失败':'';}
   const parts=[];
-  if(d.prev_close!=null)parts.push('昨收 '+d.prev_close.toFixed(2));
-  if(d.day_high!=null&&d.day_low!=null)parts.push('高/低 '+d.day_high.toFixed(2)+' / '+d.day_low.toFixed(2));
+  if(d.prev_close!=null)parts.push('昨收 '+fmtPx(d.prev_close));
+  if(d.day_high!=null&&d.day_low!=null)parts.push('高/低 '+fmtPx(d.day_high)+' / '+fmtPx(d.day_low));
   if(d.futu&&d.futu.expiry)parts.push('近月期权 '+d.futu.expiry+(d.futu.pushed_bj?' · 推送 '+d.futu.pushed_bj+' 北京时间':''));
   meta.textContent=parts.join('　');
   st.textContent='更新于 '+(d.server_time_bj||'')+' 北京时间';
   const bars=d.bars||[];
   if(!bars.length)return;
   const t0=bars[0].t+OFF,t1=bars[bars.length-1].t+OFF;
-  let cur=null,k=-1;const shade=[],cd=[],em=[],mks=[],vws=[[]];
+  let cur=null,k=-1;const shade=[],cd=[],em=[],mks=[];
   for(const b of bars){
     const dte=etDate(b.t),T=b.t+OFF;
-    if(dte!==cur){cur=dte;k++;mks.push({time:T,position:'aboveBar',color:'#6b7686',shape:'square',size:0,text:dte});vws.push([]);}
+    if(dte!==cur){cur=dte;k++;mks.push({time:T,position:'aboveBar',color:'#6b7686',shape:'square',size:0,text:dte});}
     shade.push({time:T,value:1,color:k%2?'rgba(120,140,170,0.10)':'rgba(0,0,0,0)'});
     cd.push({time:T,open:b.o,high:b.h,low:b.l,close:b.c});
-    if(b.ema20)em.push({time:T,value:+b.ema20.toFixed(2)});
-  }
-  // session VWAP as a yellow line, reset each day
-  if(d.vwap&&d.vwap.vwap){
-    // drawn as a flat-ish series via per-bar typical running vwap is not in payload; use the session value as a horizontal on the last session only
+    if(b.ema9)em.push({time:T,value:+b.ema9.toFixed(2)});
   }
   bg.setData(shade);cs.setData(cd);ema.setData(em);
-  const plo=Math.min(...bars.map(b=>b.l)),phi=Math.max(...bars.map(b=>b.h)),ppad=(phi-plo)*0.06;
+  const lastDay=etDate(bars[bars.length-1].t);
+  const dayBars=bars.filter(b=>etDate(b.t)===lastDay);
+  const view=dayBars.length?dayBars:bars;
+  const plo=Math.min(...view.map(b=>b.l)),phi=Math.max(...view.map(b=>b.h)),ppad=(phi-plo)*0.10;
   cs.applyOptions({autoscaleInfoProvider:()=>({priceRange:{minValue:plo-ppad,maxValue:phi+ppad}})});
-  // signals as markers (keep day labels too)
-  for(const s of (d.signals||[])){
-    mks.push({time:s.t+OFF,position:s.side==='BUY'?(s.cp==='C'?'belowBar':'aboveBar'):(s.cp==='P'?'belowBar':'aboveBar'),
-      color:s.side==='BUY'?'#3ddc97':'#ff5c7a',
-      shape:s.side==='BUY'?(s.cp==='C'?'arrowUp':'arrowDown'):'circle',
-      text:s.label});
-  }
   cs.setMarkers(mks);
-  // level lines
   while(lines.length){ch.removeSeries(lines.pop());}
-  const lo=Math.min(...bars.map(b=>b.l)),hi=Math.max(...bars.map(b=>b.h));
   for(const g of (d.levels||[])){
     if(g.offscreen) continue;
-    const ls=lineOf(g.color||'#90a4ae', !!g.dotted || (g.kind||'').indexOf('odte')>=0 || (g.kind||'').indexOf('sigma')>=0);
-    ls.setData([{time:t0,value:g.px},{time:t1,value:g.px}]);
+    const ls=lineOf(g.color||'#90a4ae', !!g.dotted || (g.kind||'').indexOf('odte')>=0, g.dotted?1:(g.kind==='king'?2:1));
+    const a=dayBars.length?dayBars[0].t+OFF:t0;
+    const z=dayBars.length?dayBars[dayBars.length-1].t+OFF:t1;
+    ls.setData([{time:a,value:g.px},{time:z,value:g.px}]);
   }
-  // last-session VWAP horizontal
-  if(d.vwap&&d.vwap.vwap){
-    const lastDay=etDate(bars[bars.length-1].t);
-    const dayBars=bars.filter(b=>etDate(b.t)===lastDay);
+  document.getElementById('offTop').innerHTML=offHtml(d.offscreen_top,d.offscreen_top_more,d.offscreen_extra_top);
+  document.getElementById('offBot').innerHTML=offHtml(d.offscreen_bottom,d.offscreen_bottom_more,d.offscreen_extra_bottom);
+  if(fit){
     if(dayBars.length){
-      const ls=lineOf('#f5a623', false);
-      ls.setData([{time:dayBars[0].t+OFF,value:d.vwap.vwap},{time:dayBars[dayBars.length-1].t+OFF,value:d.vwap.vwap}]);
-    }
+      ch.timeScale().setVisibleRange({from:dayBars[0].t+OFF-15*60,to:dayBars[dayBars.length-1].t+OFF+20*60});
+    }else ch.timeScale().fitContent();
+    fit=false;
   }
-  if(fit){ch.timeScale().fitContent();fit=false;}
+  requestAnimationFrame(syncOverlays);
 
   const list=document.getElementById('list');
-  list.innerHTML=(d.levels||[]).map(g=>{
+  const on=(d.levels||[]).filter(g=>!g.dotted);
+  list.innerHTML=on.map(g=>{
     const dist=g.dist==null?'':(g.dist>0?('+'+g.dist.toFixed(1)):g.dist.toFixed(1));
     const plus=g.plus?`<span class="plus">+${g.plus}</span>`:'';
-    return `<div class="lv${g.offscreen?' off':''}"><span class="dot" style="background:${g.color||'#90a4ae'}"></span><span class="nm">${g.name}${plus}</span><span class="pr">${g.px.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</span><span class="ds">${g.offscreen?dist+' 屏外':dist}</span></div>`;
+    return `<div class="lv${g.offscreen?' off':''}"><span class="dot" style="background:${g.color||'#90a4ae'}"></span><span class="nm">${g.name}${plus}</span><span class="pr">${fmtPx(g.px)}</span><span class="ds">${g.offscreen?dist+' 屏外':dist}</span></div>`;
   }).join('')||'<div class="sub" style="padding:6px">暂无关键位</div>';
 
   const sig=document.getElementById('sig');
@@ -135,9 +245,12 @@ function draw(d){
   if(!ev.length){sig.innerHTML='<b>信号</b><div class="sg">最近 '+((d.sessions||[]).length)+' 个交易日里，没有同时满足全部条件的买卖信号。</div>';}
   else sig.innerHTML='<b>信号</b>'+ev.map(s=>{
     const cls=s.side==='BUY'?'buy':'exit';
-    return `<div class="sg"><span class="${cls}">${s.label}</span>　${fmtBJ(s.t)} 北京时间　@ ${s.px}${s.reason?'　'+s.reason:''}</div>`;
+    return `<div class="sg"><span class="${cls}">${s.label}</span>　${fmtET(s.t)} 美东　（${fmtBJ(s.t)} 北京时间）　@ ${fmtPx(s.px)}${s.reason?'　'+s.reason:''}</div>`;
   }).join('');
 }
+ch.timeScale().subscribeVisibleTimeRangeChange(()=>syncOverlays());
+ch.timeScale().subscribeVisibleLogicalRangeChange(()=>syncOverlays());
+window.addEventListener('resize',()=>syncOverlays());
 let timer=null;
 async function load(){
   try{const r=await fetch('/spx/levels/data',{cache:'no-store'});const d=await r.json();if(d.error)throw new Error(d.error);draw(d);}
