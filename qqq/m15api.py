@@ -1,44 +1,118 @@
 """Standalone QQQ + SPX 15-minute candle page data (/qqq/m15). Read-only Longbridge market data via chartapi/lbsafe."""
-import time,threading
+import math, time, threading
 from datetime import datetime
 import chartapi
-ET=chartapi.ET
-DAYS=5
-SYMS=(('QQQ','QQQ.US'),('SPX','.SPX.US'))
-_lk=threading.Lock();_c={}
+ET = chartapi.ET
+DAYS = 5
+BB_N, BB_K, RSI_N = 20, 2.0, 14
+SYMS = (('QQQ', 'QQQ.US'), ('SPX', '.SPX.US'))
+_lk = threading.Lock()
+_c = {}
+
 def _f(x):
-    try:return float(x)
-    except (TypeError,ValueError):return None
-def _one(name,sym):
-    out={'name':name,'symbol':sym,'source':'Longbridge'}
     try:
-        bars=chartapi.kline(sym,'15m')
-        rd=sorted({datetime.fromtimestamp(b['t'],ET).date() for b in bars if not b['ext']})
-        keep=set(rd[-DAYS:])
-        bars=[b for b in bars if datetime.fromtimestamp(b['t'],ET).date() in keep or (rd and datetime.fromtimestamp(b['t'],ET).date()>rd[-1])]
-        out['bars']=bars;out['has_ext']=any(b['ext'] for b in bars)
-    except Exception as e:
-        out['bars']=[];out['bars_error']=str(e)[:200]
-    try:
-        q=chartapi.quote(sym)
-        last=_f(q.get('last'));pc=_f(q.get('prev_close'))
-        out['last']=last;out['prev_close']=pc;out['ts']=q.get('timestamp')
-        out['chg_pct']=(last/pc-1)*100 if last and pc else _f(q.get('change_percentage'))
-        out['day_high']=_f(q.get('high'));out['day_low']=_f(q.get('low'))
-        ext=None
-        for k in('pre_market','post_market','overnight'):
-            v=q.get(k)
-            if v and v.get('timestamp') and _f(v.get('last')) and (ext is None or v['timestamp']>ext['ts']):
-                ext={'k':k,'last':_f(v['last']),'ts':v['timestamp']}
-        if ext and last:ext['chg_pct']=(ext['last']/last-1)*100
-        out['ext']=ext
-    except Exception as e:
-        out['quote_error']=str(e)[:200]
+        return float(x)
+    except (TypeError, ValueError):
+        return None
+
+def _bb(closes):
+    out = [None] * len(closes)
+    n, k = BB_N, BB_K
+    for i in range(n - 1, len(closes)):
+        w = closes[i - n + 1:i + 1]
+        mid = sum(w) / n
+        var = sum((x - mid) ** 2 for x in w) / n
+        sd = math.sqrt(var)
+        out[i] = (mid + k * sd, mid, mid - k * sd)
     return out
+
+def _rsi(closes):
+    out = [None] * len(closes)
+    n = RSI_N
+    if len(closes) < n + 1:
+        return out
+    ag = al = 0.0
+    for i in range(1, n + 1):
+        d = closes[i] - closes[i - 1]
+        ag += max(d, 0.0)
+        al += max(-d, 0.0)
+    ag /= n
+    al /= n
+    def val(g, l):
+        if l == 0:
+            return 100.0 if g > 0 else 50.0
+        if g == 0:
+            return 0.0
+        return 100.0 - 100.0 / (1.0 + g / l)
+    out[n] = val(ag, al)
+    for i in range(n + 1, len(closes)):
+        d = closes[i] - closes[i - 1]
+        ag = (ag * (n - 1) + max(d, 0.0)) / n
+        al = (al * (n - 1) + max(-d, 0.0)) / n
+        out[i] = val(ag, al)
+    return out
+
+def _one(name, sym):
+    out = {'name': name, 'symbol': sym, 'source': 'Longbridge'}
+    try:
+        all_bars = chartapi.kline(sym, '15m')
+        rd = sorted({datetime.fromtimestamp(b['t'], ET).date() for b in all_bars if not b['ext']})
+        keep = set(rd[-DAYS:])
+        closes = [b['c'] for b in all_bars]
+        bb, rsi = _bb(closes), _rsi(closes)
+        vis, vbb, vrsi = [], [], []
+        for i, b in enumerate(all_bars):
+            d = datetime.fromtimestamp(b['t'], ET).date()
+            if d not in keep and not (rd and d > rd[-1]):
+                continue
+            vis.append(b)
+            if bb[i]:
+                u, m, l = bb[i]
+                vbb.append({'t': b['t'], 'u': round(u, 4), 'm': round(m, 4), 'l': round(l, 4)})
+            if rsi[i] is not None:
+                vrsi.append({'t': b['t'], 'v': round(rsi[i], 2)})
+        out['bars'] = vis
+        out['has_ext'] = any(b['ext'] for b in vis)
+        out['bb'] = vbb
+        out['rsi'] = vrsi
+        if vbb:
+            last = vbb[-1]
+            out['bb_last'] = {'upper': last['u'], 'mid': last['m'], 'lower': last['l']}
+        if vrsi:
+            out['rsi_last'] = vrsi[-1]['v']
+    except Exception as e:
+        out['bars'] = []
+        out['bb'] = []
+        out['rsi'] = []
+        out['bars_error'] = str(e)[:200]
+    try:
+        q = chartapi.quote(sym)
+        last = _f(q.get('last'))
+        pc = _f(q.get('prev_close'))
+        out['last'] = last
+        out['prev_close'] = pc
+        out['ts'] = q.get('timestamp')
+        out['chg_pct'] = (last / pc - 1) * 100 if last and pc else _f(q.get('change_percentage'))
+        out['day_high'] = _f(q.get('high'))
+        out['day_low'] = _f(q.get('low'))
+        ext = None
+        for k in ('pre_market', 'post_market', 'overnight'):
+            v = q.get(k)
+            if v and v.get('timestamp') and _f(v.get('last')) and (ext is None or v['timestamp'] > ext['ts']):
+                ext = {'k': k, 'last': _f(v['last']), 'ts': v['timestamp']}
+        if ext and last:
+            ext['chg_pct'] = (ext['last'] / last - 1) * 100
+        out['ext'] = ext
+    except Exception as e:
+        out['quote_error'] = str(e)[:200]
+    return out
+
 def payload():
     with _lk:
-        e=_c.get('p')
-        if e and time.time()-e[0]<10:return e[1]
-    r={'server_time':int(time.time()),'symbols':[_one(n,s) for n,s in SYMS]}
-    with _lk:_c['p']=(time.time(),r)
+        e = _c.get('p')
+        if e and time.time() - e[0] < 10:
+            return e[1]
+    r = {'server_time': int(time.time()), 'symbols': [_one(n, s) for n, s in SYMS]}
+    with _lk:
+        _c['p'] = (time.time(), r)
     return r

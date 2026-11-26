@@ -8,36 +8,79 @@ header b{font-size:16px}#st{font-size:12px;color:#8b98a9}
 .hd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
 .nm{font-size:16px;font-weight:700}.px{font-size:22px;font-weight:700}.up{color:#26a69a}.dn{color:#ef5350}
 .sub{font-size:12px;color:#8b98a9}.ex{font-size:12px;color:#c9a227}
-.ch{width:100%;height:42vh;min-height:260px}
+.ch{width:100%;height:34vh;min-height:220px}.rsi{width:100%;height:88px}
 .lg{font-size:11px;color:#8b98a9;margin-top:2px}.lg i{display:inline-block;width:10px;height:2px;vertical-align:middle;margin-right:3px}
 footer{font-size:11px;color:#6b7686;padding:8px 10px 40px;line-height:1.6}
 a{color:#9cf}
 </style></head><body>
 <header><b>QQQ / SPX 15分钟K线</b><span id="st">加载中…</span></header>
-<div class="card"><div class="hd"><span class="nm">QQQ</span><span class="px" id="p0">—</span><span id="c0"></span><span class="ex" id="e0"></span></div><div class="sub" id="s0"></div><div class="ch" id="ch0"></div><div class="lg"><i style="background:#f5a623"></i>当日VWAP　底部为成交量　浅色底纹区分交易日</div></div>
-<div class="card"><div class="hd"><span class="nm">SPX</span><span class="px" id="p1">—</span><span id="c1"></span><span class="ex" id="e1"></span></div><div class="sub" id="s1"></div><div class="ch" id="ch1"></div><div class="lg">标普500指数 · 浅色底纹区分交易日</div></div>
+<div class="card">
+  <div class="hd"><span class="nm">QQQ</span><span class="px" id="p0">—</span><span id="c0"></span><span class="ex" id="e0"></span></div>
+  <div class="sub" id="s0"></div>
+  <div class="ch" id="ch0"></div>
+  <div class="rsi" id="rsi0"></div>
+  <div class="lg"><i style="background:#5b9cff"></i>布林带(20, 2σ)　<i style="background:#f5a623"></i>当日VWAP　<i style="background:#c8a2ff"></i>RSI(14)　底部为成交量　浅色底纹区分交易日</div>
+</div>
+<div class="card">
+  <div class="hd"><span class="nm">SPX</span><span class="px" id="p1">—</span><span id="c1"></span><span class="ex" id="e1"></span></div>
+  <div class="sub" id="s1"></div>
+  <div class="ch" id="ch1"></div>
+  <div class="rsi" id="rsi1"></div>
+  <div class="lg">标普500指数　<i style="background:#5b9cff"></i>布林带(20, 2σ)　<i style="background:#c8a2ff"></i>RSI(14)　浅色底纹区分交易日</div>
+</div>
 <footer>数据源：长桥 Longbridge 实时行情（QQQ.US、.SPX.US），仅常规交易时段K线（北京时间冬令时 22:30–05:00）；盘前/盘后价格单独显示在价格旁。图上时间均为北京时间（UTC+8），日期标签为美东交易日。显示最近 5 个交易日。开盘时段约每 30 秒刷新，休市时每 5 分钟刷新。<br>美股 11/26（感恩节）休市，图上为最后一个交易日的数据。<br><a href="/">← 期权看板</a></footer>
 <script src="/qqq/static/lwc.js"></script>
 <script>
-const OFF=8*3600,SY=['QQQ','SPX'];
+const OFF=8*3600;
 const fmtBJ=t=>{const d=new Date((t+OFF)*1000);const p=n=>String(n).padStart(2,'0');return `${d.getUTCMonth()+1}/${d.getUTCDate()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`};
 const etDate=t=>new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'numeric',day:'numeric'}).format(new Date(t*1000));
-function mk(el,vol){
-  const ch=LightweightCharts.createChart(el,{autoSize:true,layout:{background:{color:'#0b0f17'},textColor:'#aab4c0',fontSize:11},
-    grid:{vertLines:{color:'#141b26'},horzLines:{color:'#141b26'}},rightPriceScale:{borderColor:'#1c2533',scaleMargins:{top:0.06,bottom:vol?0.22:0.06}},
-    timeScale:{borderColor:'#1c2533',timeVisible:true,secondsVisible:false,rightOffset:3},crosshair:{mode:0},
-    localization:{locale:'zh-CN',timeFormatter:t=>fmtBJ(t-OFF)},handleScale:{axisPressedMouseMove:true},handleScroll:{vertTouchDrag:false}});
+const common={
+  autoSize:true,
+  layout:{background:{color:'#0b0f17'},textColor:'#aab4c0',fontSize:11},
+  grid:{vertLines:{color:'#141b26'},horzLines:{color:'#141b26'}},
+  rightPriceScale:{borderColor:'#1c2533'},
+  timeScale:{borderColor:'#1c2533',timeVisible:true,secondsVisible:false,rightOffset:3},
+  crosshair:{mode:0},
+  localization:{locale:'zh-CN',timeFormatter:t=>fmtBJ(t-OFF)},
+  handleScale:{axisPressedMouseMove:true},
+  handleScroll:{vertTouchDrag:false}
+};
+function mkPrice(el,vol){
+  const ch=LightweightCharts.createChart(el,{...common,rightPriceScale:{borderColor:'#1c2533',scaleMargins:{top:0.06,bottom:vol?0.22:0.06}}});
   const bg=ch.addHistogramSeries({priceScaleId:'bg',priceLineVisible:false,lastValueVisible:false,priceFormat:{type:'volume'}});
   ch.priceScale('bg').applyOptions({scaleMargins:{top:0,bottom:0},visible:false});
+  const up=ch.addLineSeries({color:'rgba(91,156,255,0.8)',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});
+  const mid=ch.addLineSeries({color:'#5b9cff',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false,lineStyle:2});
+  const lo=ch.addLineSeries({color:'rgba(91,156,255,0.8)',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});
   const cs=ch.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderVisible:false,wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
   let v=null,vw=null;
-  if(vol){v=ch.addHistogramSeries({priceScaleId:'v',priceFormat:{type:'volume'},priceLineVisible:false,lastValueVisible:false});ch.priceScale('v').applyOptions({scaleMargins:{top:0.82,bottom:0}});
-    vw=[];}
-  return {ch,bg,cs,v,vw,fit:true};
+  if(vol){v=ch.addHistogramSeries({priceScaleId:'v',priceFormat:{type:'volume'},priceLineVisible:false,lastValueVisible:false});ch.priceScale('v').applyOptions({scaleMargins:{top:0.82,bottom:0}});vw=[];}
+  return {ch,bg,up,mid,lo,cs,v,vw,fit:true};
 }
-const C=[mk(document.getElementById('ch0'),true),mk(document.getElementById('ch1'),false)];
+function mkRsi(el){
+  const ch=LightweightCharts.createChart(el,{...common,layout:{background:{color:'#0b0f17'},textColor:'#aab4c0',fontSize:10},
+    timeScale:{visible:false,borderVisible:false,rightOffset:3},
+    rightPriceScale:{borderColor:'#1c2533',scaleMargins:{top:0.08,bottom:0.08}},
+    grid:{vertLines:{color:'#141b26'},horzLines:{color:'#1a2230'}}});
+  const rs=ch.addLineSeries({color:'#c8a2ff',lineWidth:1,priceLineVisible:false,lastValueVisible:true,
+    priceFormat:{type:'price',precision:1,minMove:0.1},
+    autoscaleInfoProvider:()=>({priceRange:{minValue:0,maxValue:100}})});
+  rs.createPriceLine({price:70,color:'rgba(239,83,80,0.45)',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:''});
+  rs.createPriceLine({price:30,color:'rgba(38,166,154,0.45)',lineWidth:1,lineStyle:2,axisLabelVisible:true,title:''});
+  rs.createPriceLine({price:50,color:'rgba(139,152,169,0.25)',lineWidth:1,lineStyle:2,axisLabelVisible:false,title:''});
+  return {ch,rs,fit:true};
+}
+function link(a,b){
+  let lock=false;
+  const go=(src,dst)=>r=>{if(lock||!r)return;lock=true;try{dst.timeScale().setVisibleLogicalRange(r);}finally{lock=false;}};
+  a.timeScale().subscribeVisibleLogicalRangeChange(go(a,b));
+  b.timeScale().subscribeVisibleLogicalRangeChange(go(b,a));
+}
+const C=[mkPrice(document.getElementById('ch0'),true),mkPrice(document.getElementById('ch1'),false)];
+const R=[mkRsi(document.getElementById('rsi0')),mkRsi(document.getElementById('rsi1'))];
+C.forEach((c,i)=>link(c.ch,R[i].ch));
 function draw(i,s){
-  const c=C[i],b=s.bars||[];
+  const c=C[i],r=R[i],b=s.bars||[];
   const px=document.getElementById('p'+i),cc=document.getElementById('c'+i),ee=document.getElementById('e'+i),ss=document.getElementById('s'+i);
   if(s.last!=null){px.textContent=s.last.toFixed(2);const up=(s.chg_pct||0)>=0;px.className='px '+(up?'up':'dn');
     cc.textContent=s.chg_pct!=null?((up?'+':'')+s.chg_pct.toFixed(2)+'%'):'';cc.className=up?'up':'dn';}
@@ -46,9 +89,11 @@ function draw(i,s){
   const parts=[];if(s.prev_close!=null)parts.push('昨收 '+s.prev_close.toFixed(2));
   if(s.day_high!=null&&s.day_low!=null)parts.push('日内高/低 '+s.day_high.toFixed(2)+' / '+s.day_low.toFixed(2));
   if(b.length)parts.push('最新K线 '+fmtBJ(b[b.length-1].t)+' 北京时间');
+  if(s.bb_last)parts.push('布林 '+s.bb_last.upper.toFixed(2)+' / '+s.bb_last.mid.toFixed(2)+' / '+s.bb_last.lower.toFixed(2));
+  if(s.rsi_last!=null)parts.push('RSI(14) '+s.rsi_last.toFixed(1));
   if(s.bars_error)parts.push('K线获取失败');ss.textContent=parts.join('　');
   if(!b.length)return;
-  const days=[];let cur=null,k=-1,pv=0,vv=0;const bg=[],cd=[],vo=[],vw=[],mks=[];
+  let cur=null,k=-1,pv=0,vv=0;const bg=[],cd=[],vo=[],vw=[],mks=[];
   for(const x of b){const d=etDate(x.t),T=x.t+OFF;
     if(d!==cur){cur=d;k++;pv=0;vv=0;mks.push({time:T,position:'aboveBar',color:'#6b7686',shape:'square',size:0,text:d});if(c.vw)vw.push([]);}
     bg.push({time:T,value:1,color:k%2?'rgba(120,140,170,0.12)':'rgba(0,0,0,0)'});
@@ -56,16 +101,21 @@ function draw(i,s){
     if(c.v)vo.push({time:T,value:x.v,color:x.c>=x.o?'rgba(38,166,154,0.45)':'rgba(239,83,80,0.45)'});
     if(c.vw&&x.v>0&&!x.ext){pv+=(x.h+x.l+x.c)/3*x.v;vv+=x.v;vw[vw.length-1].push({time:T,value:+(pv/vv).toFixed(3)});}
   }
-  c.bg.setData(bg);c.cs.setData(cd);c.cs.setMarkers(mks);
+  const up=(s.bb||[]).map(x=>({time:x.t+OFF,value:x.u}));
+  const mid=(s.bb||[]).map(x=>({time:x.t+OFF,value:x.m}));
+  const lo=(s.bb||[]).map(x=>({time:x.t+OFF,value:x.l}));
+  const rsi=(s.rsi||[]).map(x=>({time:x.t+OFF,value:x.v}));
+  c.bg.setData(bg);c.up.setData(up);c.lo.setData(lo);c.mid.setData(mid);c.cs.setData(cd);c.cs.setMarkers(mks);
   if(c.v)c.v.setData(vo);
   if(c.vw){while(c.vw.length<vw.length)c.vw.push(c.ch.addLineSeries({color:'#f5a623',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false}));
     c.vw.forEach((ls,j)=>ls.setData(vw[j]||[]));}
-  if(c.fit){c.ch.timeScale().fitContent();c.fit=false;}
+  r.rs.setData(rsi);
+  if(c.fit){c.ch.timeScale().fitContent();r.ch.timeScale().fitContent();c.fit=false;r.fit=false;}
 }
 function inSession(){const n=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));const m=n.getHours()*60+n.getMinutes(),w=n.getDay();return w>0&&w<6&&m>=4*60&&m<20*60;}
 let timer=null;
 async function load(){
-  try{const r=await fetch('/qqq/m15data',{cache:'no-store'});const d=await r.json();
+  try{const res=await fetch('/qqq/m15data',{cache:'no-store'});const d=await res.json();
     (d.symbols||[]).forEach((s,i)=>draw(i,s));
     document.getElementById('st').textContent='更新于 '+new Date().toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false})+' 北京时间'+(inSession()?'':' · 休市');
   }catch(e){document.getElementById('st').textContent='加载失败，稍后重试';}
