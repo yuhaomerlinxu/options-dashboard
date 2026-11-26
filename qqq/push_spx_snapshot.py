@@ -177,15 +177,43 @@ def once():
         _log('pushed ok pushed_bj=%s estimate=%s' % (res.get('pushed_bj'), res.get('estimate')))
     else:
         _log('push failed: ' + str(res.get('error')) + ((' ' + str(res.get('body'))) if res.get('body') else ''))
+    def _run_capped(label, fn, timeout):
+        """Run a side push with a hard cap so a hung Futu/Longbridge call cannot stall the loop overnight."""
+        import threading
+        box = {}
+        def _run():
+            try:
+                box['r'] = fn()
+            except Exception as e:
+                box['e'] = e
+        th = threading.Thread(target=_run, name=label, daemon=True)
+        th.start()
+        th.join(timeout)
+        if th.is_alive():
+            _log(label + ' timed out after %ss' % timeout)
+            return {'ok': False, 'error': 'timeout_%s' % timeout}
+        if 'e' in box:
+            _log(label + ' skipped: ' + type(box['e']).__name__ + ': ' + str(box['e'])[:200])
+            return {'ok': False, 'error': str(box['e'])[:200]}
+        return box.get('r') or {'ok': False, 'error': 'empty'}
+
+    res = dict(res)
     try:
         import push_spx_levels
-        lv = push_spx_levels.once()
-        res = dict(res)
+        lv = _run_capped('levels push', push_spx_levels.once, 120)
         res['levels_ok'] = bool(lv.get('ok'))
         if not lv.get('ok'):
             res['levels_error'] = lv.get('error')
     except Exception as e:
         _log('levels push skipped: ' + type(e).__name__ + ': ' + str(e)[:200])
+    try:
+        import push_spx_board
+        bd = _run_capped('board push', push_spx_board.once, 180)
+        res['board_ok'] = bool(bd.get('ok'))
+        if not bd.get('ok'):
+            res['board_error'] = bd.get('error')
+    except Exception as e:
+        _log('board push skipped: ' + type(e).__name__ + ': ' + str(e)[:200])
     return res if res.get('ok') else {**res, 'build_ok': True}
 
 

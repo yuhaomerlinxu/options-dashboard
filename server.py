@@ -204,7 +204,7 @@ class H(qqqapp.Mixin, SimpleHTTPRequestHandler):
     def do_POST(s):
         if not s.auth(): return
         p = s.path.split("?")[0]
-        if p in ("/api/strategy/spx_snapshot", "/strategy/spx_snapshot", "/api/spx/levels_snapshot"):
+        if p in ("/api/strategy/spx_snapshot", "/strategy/spx_snapshot", "/api/spx/levels_snapshot", "/api/spx/levels_board"):
             return s.qqq_post()
         b = b"not found"; s.send_response(404); s.send_header("Content-Length", len(b)); s.end_headers(); s.wfile.write(b)
     def log_message(s, *a): pass

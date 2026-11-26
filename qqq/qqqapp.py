@@ -200,6 +200,24 @@ class Mixin:
             except Exception as e:
                 r={'ok':False,'error':str(e)}
             self.send(200 if r.get('ok') else 400,json.dumps(r,ensure_ascii=False,default=str).encode(),'application/json; charset=utf-8');return
+        if p=='/api/spx/levels_board':
+            try:
+                n=int(self.headers.get('Content-Length') or 0)
+            except (TypeError,ValueError):
+                n=0
+            if n<=0 or n>2000000:
+                self.send(400,json.dumps({'ok':False,'error':'bad content-length'}).encode(),'application/json; charset=utf-8');return
+            raw=self.rfile.read(n)
+            try:
+                doc=json.loads(raw)
+            except Exception:
+                self.send(400,json.dumps({'ok':False,'error':'invalid json'}).encode(),'application/json; charset=utf-8');return
+            try:
+                import spxlevels_board
+                r=spxlevels_board.ingest(doc)
+            except Exception as e:
+                r={'ok':False,'error':str(e)}
+            self.send(200 if r.get('ok') else 400,json.dumps(r,ensure_ascii=False,default=str).encode(),'application/json; charset=utf-8');return
         if p in ('/api/strategy/spx_snapshot','/strategy/spx_snapshot'):
             try:
                 n=int(self.headers.get('Content-Length') or 0)
@@ -223,16 +241,28 @@ class Mixin:
         p=self.path.split('?')[0].rstrip('/')
         if p=='/spx/levels':self.send(200,open(os.path.join(D,'spxlevels.html'),'rb').read(),'text/html; charset=utf-8');return
         if p=='/spx/levels/data':
+            # Serve the box-pushed snapshot only. Never compute on this request
+            # path: a cold Longbridge run on Render often exceeds 60s and the
+            # page just keeps spinning.
             try:
-                import spxlevelsapi
-                r=spxlevelsapi.payload()
+                import spxlevels_board
+                r=spxlevels_board.get_snap()
+                if not r:
+                    r={'ok':False,'error':'看板数据还没送到云端。这台电脑会自动推送，请十几秒后刷新。'}
             except Exception as e:
-                r={'error':str(e)}
+                r={'ok':False,'error':'看板数据读取失败：%s'%e}
             self.send(200,json.dumps(r,ensure_ascii=False,default=str).encode(),'application/json; charset=utf-8');return
         if p=='/api/spx/levels_snapshot':
             try:
                 import spxlevels_snap
                 r=spxlevels_snap.status()
+            except Exception as e:
+                r={'present':False,'fresh':False,'error':str(e)}
+            self.send(200,json.dumps(r,ensure_ascii=False,default=str).encode(),'application/json; charset=utf-8');return
+        if p=='/api/spx/levels_board':
+            try:
+                import spxlevels_board
+                r=spxlevels_board.status()
             except Exception as e:
                 r={'present':False,'fresh':False,'error':str(e)}
             self.send(200,json.dumps(r,ensure_ascii=False,default=str).encode(),'application/json; charset=utf-8');return

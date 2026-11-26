@@ -34,6 +34,7 @@ h1{font-size:15px;margin:0;font-weight:700;letter-spacing:.02em}
 .sig b{display:block;margin-bottom:4px}
 .sg{font-size:12px;padding:3px 0;color:#c5d0da}
 .sg .buy{color:#3ddc97;font-weight:700}.sg .exit{color:#ff5c7a;font-weight:700}
+.errbox{margin:12px;padding:12px 14px;background:#2a1619;border:1px solid #5a2a32;border-radius:8px;color:#ffb4bc;font-size:13px;line-height:1.6;display:none}
 .rule{margin:8px 12px 48px;padding:10px 12px;background:#14181e;border:1px solid #1e2630;border-radius:8px;font-size:11px;color:#9aa7b4;line-height:1.7}
 .rule b{color:#c5d0da}
 a{color:#7cb7ff}
@@ -48,6 +49,7 @@ a{color:#7cb7ff}
   <div class="ov" id="ov"></div>
   <div class="offbar bot" id="offBot"></div>
 </div>
+<div class="errbox" id="errbox"></div>
 <div class="list" id="list"></div>
 <div class="sig" id="sig"></div>
 <div class="rule" id="rule">
@@ -195,7 +197,8 @@ function draw(d){
   if(d.day_high!=null&&d.day_low!=null)parts.push('高/低 '+fmtPx(d.day_high)+' / '+fmtPx(d.day_low));
   if(d.futu&&d.futu.expiry)parts.push('近月期权 '+d.futu.expiry+(d.futu.pushed_bj?' · 推送 '+d.futu.pushed_bj+' 北京时间':''));
   meta.textContent=parts.join('　');
-  st.textContent='更新于 '+(d.server_time_bj||'')+' 北京时间';
+  const pushed=d.board_pushed_bj||d.server_time_bj||'';
+  st.textContent=pushed?('数据推送于 '+pushed+' 北京时间'):'已更新';
   const bars=d.bars||[];
   if(!bars.length)return;
   const t0=bars[0].t+OFF,t1=bars[bars.length-1].t+OFF;
@@ -252,9 +255,32 @@ ch.timeScale().subscribeVisibleTimeRangeChange(()=>syncOverlays());
 ch.timeScale().subscribeVisibleLogicalRangeChange(()=>syncOverlays());
 window.addEventListener('resize',()=>syncOverlays());
 let timer=null;
+function showErr(msg){
+  const el=document.getElementById('errbox');
+  const st=document.getElementById('st');
+  st.textContent=msg;
+  if(!lastDoc){
+    el.style.display='block';
+    el.textContent=msg+' 不是页面坏了，是数据还没送到。请稍等几秒后刷新。';
+  }
+}
+function hideErr(){document.getElementById('errbox').style.display='none';}
 async function load(){
-  try{const r=await fetch('/spx/levels/data',{cache:'no-store'});const d=await r.json();if(d.error)throw new Error(d.error);draw(d);}
-  catch(e){document.getElementById('st').textContent='加载失败，稍后重试';}
+  const ac=new AbortController();
+  const to=setTimeout(()=>ac.abort(),12000);
+  try{
+    const r=await fetch('/spx/levels/data',{cache:'no-store',signal:ac.signal});
+    clearTimeout(to);
+    const d=await r.json();
+    if(!d || d.ok===false || d.error) throw new Error((d && (d.error||d.message)) || '没有数据');
+    if(!(d.bars||[]).length) throw new Error(d.error||'暂无K线');
+    hideErr();
+    draw(d);
+  }catch(e){
+    clearTimeout(to);
+    const msg=e && e.name==='AbortError' ? '数据请求超时，请刷新重试' : ('加载失败：'+(e && e.message ? e.message : '请刷新重试'));
+    showErr(msg);
+  }
   clearTimeout(timer);timer=setTimeout(load,30000);
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
