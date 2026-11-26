@@ -1,0 +1,149 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>SPX 位移位看板</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0e1117;color:#e6edf3;font:14px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+header{padding:10px 12px 6px;border-bottom:1px solid #1e2630}
+.row{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px 12px}
+h1{font-size:15px;margin:0;font-weight:700;letter-spacing:.02em}
+.px{font-size:28px;font-weight:700}.up{color:#3ddc97}.dn{color:#ff5c7a}
+.sub{font-size:12px;color:#8b98a9}#st{margin-left:auto;font-size:11px;color:#8b98a9}
+.ch{width:100%;height:52vh;min-height:320px;background:#0e1117}
+.list{padding:8px 10px 4px;display:flex;flex-direction:column;gap:3px}
+.lv{display:flex;align-items:baseline;gap:8px;font-size:12px;padding:3px 4px;border-radius:4px}
+.lv .dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px;margin-top:3px}
+.lv .nm{flex:1;min-width:0}.lv .pr{font-variant-numeric:tabular-nums;font-weight:600}
+.lv .ds{font-variant-numeric:tabular-nums;color:#8b98a9;width:64px;text-align:right}
+.lv.off .nm,.lv.off .pr{color:#8b98a9}
+.plus{color:#ffd54f;font-size:11px;margin-left:4px}
+.sig{padding:8px 12px;border-top:1px solid #1e2630}
+.sig b{display:block;margin-bottom:4px}
+.sg{font-size:12px;padding:3px 0;color:#c5d0da}
+.sg .buy{color:#3ddc97;font-weight:700}.sg .exit{color:#ff5c7a;font-weight:700}
+.rule{margin:8px 12px 48px;padding:10px 12px;background:#161b22;border:1px solid #1e2630;border-radius:8px;font-size:11px;color:#9aa7b4;line-height:1.65}
+.rule b{color:#c5d0da}
+a{color:#7cb7ff}
+</style></head><body>
+<header>
+  <div class="row"><h1>SPX 位移位</h1><span class="sub">5分钟 · .SPX.US</span><span id="st">加载中…</span></div>
+  <div class="row" style="margin-top:4px"><span class="px" id="px">—</span><span id="chg"></span><span class="sub" id="meta"></span></div>
+</header>
+<div class="ch" id="ch"></div>
+<div class="list" id="list"></div>
+<div class="sig" id="sig"></div>
+<div class="rule" id="rule">
+  <b>怎么算的（仅供参考，不会下单）</b><br>
+  <b>位移位：</b>每个周期找最近一次实体大于 1.5 倍 ATR(14) 的位移K线，取它的开盘价。多头位移是支撑，空头位移是阻力。周期包括 15 分钟、1 小时、4 小时、日、周、月。靠近的位会合并且标 +N。<br>
+  <b>Day + Week King：</b>已完成的上一交易日与上一自然周的典型价格 (H+L+C)/3 的均值。<b>4H</b> 是最近一根已完成 4 小时K线的 (H+L+C)/3。<br>
+  <b>σ：</b>当日成交量加权 VWAP ± 1σ；若富途近月跨式可用，再画隐含 1σ（跨式价格 / √(2/π)）。<br>
+  <b>虚线：</b>富途 SPXW 近月到期、未平仓量最大的几个看涨/看跌行权价（从这台电脑推送到看板，因为云端连不上富途）。<br>
+  <b>BUY NOW：</b>价格重新站上一条多头位移位（上一根 5 分钟收在该位下，本根收在上），同时 5 分钟 EMA9 在本根或前 3 根内上穿 EMA20，且 8 点以内还有至少一条其他关键位。目标是最接近现价的 5 点一档看涨行权价。看跌信号对称。<br>
+  <b>EXIT：</b>价格触及下一档反向关键位，或收盘重新穿越进场那条位移位。<br>
+  <a href="/">← 期权看板</a>　<a href="/qqq/m15">15分钟看板</a>
+</div>
+<script src="/qqq/static/lwc.js"></script>
+<script>
+const OFF=8*3600;
+const fmtBJ=t=>{const d=new Date((t+OFF)*1000);const p=n=>String(n).padStart(2,'0');return `${d.getUTCMonth()+1}/${d.getUTCDate()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`};
+const etDate=t=>new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'numeric',day:'numeric'}).format(new Date(t*1000));
+const ch=LightweightCharts.createChart(document.getElementById('ch'),{
+  autoSize:true,
+  layout:{background:{color:'#0e1117'},textColor:'#9aa7b4',fontSize:11},
+  grid:{vertLines:{color:'#161c25'},horzLines:{color:'#161c25'}},
+  rightPriceScale:{borderColor:'#1e2630',scaleMargins:{top:0.06,bottom:0.04}},
+  timeScale:{borderColor:'#1e2630',timeVisible:true,secondsVisible:false,rightOffset:6},
+  crosshair:{mode:0},
+  localization:{locale:'zh-CN',timeFormatter:t=>fmtBJ(t-OFF)},
+  handleScale:{axisPressedMouseMove:true},handleScroll:{vertTouchDrag:false}
+});
+const bg=ch.addHistogramSeries({priceScaleId:'bg',priceLineVisible:false,lastValueVisible:false,priceFormat:{type:'volume'}});
+ch.priceScale('bg').applyOptions({scaleMargins:{top:0,bottom:0},visible:false});
+const cs=ch.addCandlestickSeries({upColor:'#3ddc97',downColor:'#ff5c7a',borderVisible:false,wickUpColor:'#3ddc97',wickDownColor:'#ff5c7a'});
+const ema=ch.addLineSeries({color:'#7cb7ff',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});
+const vwaps=[];
+const lines=[];
+function lineOf(color, dotted){
+  const ls=ch.addLineSeries({color,lineWidth:dotted?1:1,lineStyle:dotted?2:0,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false,autoscaleInfoProvider:()=>null});
+  lines.push(ls);return ls;
+}
+let fit=true;
+function draw(d){
+  const px=document.getElementById('px'),cg=document.getElementById('chg'),meta=document.getElementById('meta'),st=document.getElementById('st');
+  if(d.last!=null){px.textContent=d.last.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const up=(d.chg_pct||0)>=0;px.className='px '+(up?'up':'dn');
+    cg.className=up?'up':'dn';cg.textContent=d.chg_pct!=null?((up?'+':'')+d.chg_pct.toFixed(2)+'%'):'';}
+  else {px.textContent='—';cg.textContent=d.quote_error?'行情获取失败':'';}
+  const parts=[];
+  if(d.prev_close!=null)parts.push('昨收 '+d.prev_close.toFixed(2));
+  if(d.day_high!=null&&d.day_low!=null)parts.push('高/低 '+d.day_high.toFixed(2)+' / '+d.day_low.toFixed(2));
+  if(d.futu&&d.futu.expiry)parts.push('近月期权 '+d.futu.expiry+(d.futu.pushed_bj?' · 推送 '+d.futu.pushed_bj+' 北京时间':''));
+  meta.textContent=parts.join('　');
+  st.textContent='更新于 '+(d.server_time_bj||'')+' 北京时间';
+  const bars=d.bars||[];
+  if(!bars.length)return;
+  const t0=bars[0].t+OFF,t1=bars[bars.length-1].t+OFF;
+  let cur=null,k=-1;const shade=[],cd=[],em=[],mks=[],vws=[[]];
+  for(const b of bars){
+    const dte=etDate(b.t),T=b.t+OFF;
+    if(dte!==cur){cur=dte;k++;mks.push({time:T,position:'aboveBar',color:'#6b7686',shape:'square',size:0,text:dte});vws.push([]);}
+    shade.push({time:T,value:1,color:k%2?'rgba(120,140,170,0.10)':'rgba(0,0,0,0)'});
+    cd.push({time:T,open:b.o,high:b.h,low:b.l,close:b.c});
+    if(b.ema20)em.push({time:T,value:+b.ema20.toFixed(2)});
+  }
+  // session VWAP as a yellow line, reset each day
+  if(d.vwap&&d.vwap.vwap){
+    // drawn as a flat-ish series via per-bar typical running vwap is not in payload; use the session value as a horizontal on the last session only
+  }
+  bg.setData(shade);cs.setData(cd);ema.setData(em);
+  const plo=Math.min(...bars.map(b=>b.l)),phi=Math.max(...bars.map(b=>b.h)),ppad=(phi-plo)*0.06;
+  cs.applyOptions({autoscaleInfoProvider:()=>({priceRange:{minValue:plo-ppad,maxValue:phi+ppad}})});
+  // signals as markers (keep day labels too)
+  for(const s of (d.signals||[])){
+    mks.push({time:s.t+OFF,position:s.side==='BUY'?(s.cp==='C'?'belowBar':'aboveBar'):(s.cp==='P'?'belowBar':'aboveBar'),
+      color:s.side==='BUY'?'#3ddc97':'#ff5c7a',
+      shape:s.side==='BUY'?(s.cp==='C'?'arrowUp':'arrowDown'):'circle',
+      text:s.label});
+  }
+  cs.setMarkers(mks);
+  // level lines
+  while(lines.length){ch.removeSeries(lines.pop());}
+  const lo=Math.min(...bars.map(b=>b.l)),hi=Math.max(...bars.map(b=>b.h));
+  for(const g of (d.levels||[])){
+    if(g.offscreen) continue;
+    const ls=lineOf(g.color||'#90a4ae', !!g.dotted || (g.kind||'').indexOf('odte')>=0 || (g.kind||'').indexOf('sigma')>=0);
+    ls.setData([{time:t0,value:g.px},{time:t1,value:g.px}]);
+  }
+  // last-session VWAP horizontal
+  if(d.vwap&&d.vwap.vwap){
+    const lastDay=etDate(bars[bars.length-1].t);
+    const dayBars=bars.filter(b=>etDate(b.t)===lastDay);
+    if(dayBars.length){
+      const ls=lineOf('#f5a623', false);
+      ls.setData([{time:dayBars[0].t+OFF,value:d.vwap.vwap},{time:dayBars[dayBars.length-1].t+OFF,value:d.vwap.vwap}]);
+    }
+  }
+  if(fit){ch.timeScale().fitContent();fit=false;}
+
+  const list=document.getElementById('list');
+  list.innerHTML=(d.levels||[]).map(g=>{
+    const dist=g.dist==null?'':(g.dist>0?('+'+g.dist.toFixed(1)):g.dist.toFixed(1));
+    const plus=g.plus?`<span class="plus">+${g.plus}</span>`:'';
+    return `<div class="lv${g.offscreen?' off':''}"><span class="dot" style="background:${g.color||'#90a4ae'}"></span><span class="nm">${g.name}${plus}</span><span class="pr">${g.px.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</span><span class="ds">${g.offscreen?dist+' 屏外':dist}</span></div>`;
+  }).join('')||'<div class="sub" style="padding:6px">暂无关键位</div>';
+
+  const sig=document.getElementById('sig');
+  const ev=d.signals||[];
+  if(!ev.length){sig.innerHTML='<b>信号</b><div class="sg">最近 '+((d.sessions||[]).length)+' 个交易日里，没有同时满足全部条件的买卖信号。</div>';}
+  else sig.innerHTML='<b>信号</b>'+ev.map(s=>{
+    const cls=s.side==='BUY'?'buy':'exit';
+    return `<div class="sg"><span class="${cls}">${s.label}</span>　${fmtBJ(s.t)} 北京时间　@ ${s.px}${s.reason?'　'+s.reason:''}</div>`;
+  }).join('');
+}
+let timer=null;
+async function load(){
+  try{const r=await fetch('/spx/levels/data',{cache:'no-store'});const d=await r.json();if(d.error)throw new Error(d.error);draw(d);}
+  catch(e){document.getElementById('st').textContent='加载失败，稍后重试';}
+  clearTimeout(timer);timer=setTimeout(load,30000);
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
+load();
+</script></body></html>

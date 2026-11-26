@@ -177,6 +177,15 @@ def once():
         _log('pushed ok pushed_bj=%s estimate=%s' % (res.get('pushed_bj'), res.get('estimate')))
     else:
         _log('push failed: ' + str(res.get('error')) + ((' ' + str(res.get('body'))) if res.get('body') else ''))
+    try:
+        import push_spx_levels
+        lv = push_spx_levels.once()
+        res = dict(res)
+        res['levels_ok'] = bool(lv.get('ok'))
+        if not lv.get('ok'):
+            res['levels_error'] = lv.get('error')
+    except Exception as e:
+        _log('levels push skipped: ' + type(e).__name__ + ': ' + str(e)[:200])
     return res if res.get('ok') else {**res, 'build_ok': True}
 
 

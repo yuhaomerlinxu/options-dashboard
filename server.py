@@ -169,7 +169,7 @@ class H(qqqapp.Mixin, SimpleHTTPRequestHandler):
         p = s.path.split("?")[0]
         if p in ("/levels", "/radar"):
             s.send_response(302); s.send_header("Location", "/qqq/chart?s=QQQ" if p == "/levels" else "/qqq/radar"); s.end_headers(); return
-        if p == "/qqq" or p.startswith("/qqq/") or p == "/echo" or p.startswith("/echo/") or p == "/mbot" or p.startswith("/mbot/") or p == "/strategy" or p.startswith("/strategy/") or p == "/funds" or p.startswith("/funds/") or p == "/api/strategy/close_estimate" or p.startswith("/api/strategy/"): return s.qqq_get()
+        if p == "/qqq" or p.startswith("/qqq/") or p == "/echo" or p.startswith("/echo/") or p == "/mbot" or p.startswith("/mbot/") or p == "/strategy" or p.startswith("/strategy/") or p == "/funds" or p.startswith("/funds/") or p == "/spx" or p.startswith("/spx/") or p == "/api/strategy/close_estimate" or p.startswith("/api/strategy/") or p.startswith("/api/spx/"): return s.qqq_get()
         if p == "/api/tickers": return s.j(TICKERS)
         if p.startswith("/api/add/"):
             t = re.sub(r"[^A-Z.]", "", p.rsplit("/", 1)[1].upper())[:6]
@@ -204,7 +204,7 @@ class H(qqqapp.Mixin, SimpleHTTPRequestHandler):
     def do_POST(s):
         if not s.auth(): return
         p = s.path.split("?")[0]
-        if p in ("/api/strategy/spx_snapshot", "/strategy/spx_snapshot"):
+        if p in ("/api/strategy/spx_snapshot", "/strategy/spx_snapshot", "/api/spx/levels_snapshot"):
             return s.qqq_post()
         b = b"not found"; s.send_response(404); s.send_header("Content-Length", len(b)); s.end_headers(); s.wfile.write(b)
     def log_message(s, *a): pass
