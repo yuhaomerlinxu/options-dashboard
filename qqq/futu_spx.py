@@ -475,14 +475,13 @@ def expected_move_to_close(straddle_info, expiry, now=None):
         exp_d = datetime.fromisoformat(str(expiry)[:10]).date()
     except ValueError:
         return sigma, 'ATM-straddle 1-sigma (expiry unparsed, used as-is)'
-    # Coming RTH close date: today if before 16:00 ET on a weekday, else next weekday.
-    close_dt = now.replace(hour=16, minute=0, second=0, microsecond=0)
-    if now.weekday() >= 5 or now >= close_dt:
-        # next weekday
-        d = now.date() + timedelta(days=1)
-        while d.weekday() >= 5:
-            d += timedelta(days=1)
-        close_dt = datetime(d.year, d.month, d.day, 16, 0, tzinfo=ET)
+    # Coming RTH close: today if still in session (16:00 ET, or 13:00 on a
+    # half day), else the next trading day (weekends and NYSE holidays skipped).
+    import us_market_calendar as cal
+    close_dt = cal.session_close_dt(now.date())
+    if close_dt is None or now >= close_dt:
+        d = cal.next_trading_day(now.date())
+        close_dt = cal.session_close_dt(d)
         now_for_t = close_dt.replace(hour=9, minute=30)  # full session remains
         t_close = (close_dt - now_for_t).total_seconds() + 16 * 3600  # include overnight roughly
         # Simpler: after hours, coming close is the next session; if expiry is that
@@ -490,29 +489,16 @@ def expected_move_to_close(straddle_info, expiry, now=None):
         if exp_d <= d:
             return sigma, 'ATM-straddle 1-sigma to nearest expiry (next session)'
         # expiry farther than the next close: scale by trading-day fraction
-        # count weekdays from d to exp_d inclusive-ish
-        days = 0
-        x = d
-        while x < exp_d:
-            x += timedelta(days=1)
-            if x.weekday() < 5:
-                days += 1
-        days = max(days, 1)
+        days = cal.trading_days_between(d, exp_d)
         em = sigma / math.sqrt(days)
         return em, 'ATM-straddle 1-sigma scaled to next close by 1/sqrt(%d trading days to expiry)' % days
-    # In RTH, coming close is today 16:00
+    # In RTH, coming close is today's actual close (13:00 ET on early-close days).
     if exp_d <= now.date():
         return sigma, 'ATM-straddle 1-sigma to today\'s expiry'
-    days = 0
-    x = now.date()
-    while x < exp_d:
-        x += timedelta(days=1)
-        if x.weekday() < 5:
-            days += 1
-    days = max(days, 1)
+    days = cal.trading_days_between(now.date(), exp_d)
     # remaining fraction of today plus later days
     rem = (close_dt - now).total_seconds()
-    sess = 6.5 * 3600
+    sess = cal.FULL_SESSION_SEC
     t_ratio = (rem / sess + (days - 1)) / days if days else 1.0
     t_ratio = max(0.05, min(1.0, t_ratio))
     em = sigma * math.sqrt(t_ratio)

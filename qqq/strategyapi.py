@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import echoapi as E
+import us_market_calendar as _mcal
 
 ET = ZoneInfo('America/New_York')
 BJ = ZoneInfo('Asia/Shanghai')
@@ -657,7 +658,7 @@ def _gex_bars(by, top=40):
              'vol': by[k]['vol_c'] + by[k]['vol_p']} for k in ks]
 
 
-SESSION_SEC = 6.5 * 3600  # 09:30–16:00 ET
+SESSION_SEC = _mcal.FULL_SESSION_SEC  # 09:30–16:00 ET; early-close days still annualize against this
 
 FORMULA_CLOSE_ZH = (
     '收盘预估 = w现价×现价 + w磁铁×GEX核心磁铁 + w痛点×Max Pain + w支点×（动态支点或当日POC）。'
@@ -672,17 +673,14 @@ FORMULA_CLOSE_ZH = (
 
 
 def _session_remaining(now=None):
-    """Return (remaining_sec, session_sec, in_rth). Outside RTH / before open / weekend: full session remaining."""
-    now = now or datetime.now(ET)
-    sess = SESSION_SEC
-    if now.weekday() >= 5:
-        return sess, sess, False
-    open_t = now.replace(hour=9, minute=30, second=0, microsecond=0)
-    close_t = now.replace(hour=16, minute=0, second=0, microsecond=0)
-    if now < open_t or now >= close_t:
-        return sess, sess, False
-    rem = (close_t - now).total_seconds()
-    return max(0.0, rem), sess, True
+    """Return (remaining_sec, session_sec, in_rth).
+
+    Outside RTH / before open / weekend / holiday: full session remaining.
+    remaining_sec uses the actual NYSE close (13:00 ET on early-close days).
+    session_sec stays the standard 6.5h so pin weights and expected-move
+    annualization are unchanged.
+    """
+    return _mcal.session_remaining(now)
 
 
 def _spot_weight(t_rem, t_sess):
