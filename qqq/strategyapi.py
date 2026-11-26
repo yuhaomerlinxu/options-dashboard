@@ -826,12 +826,13 @@ def blend_close_estimate(spot, levels, by=None, iv=None, now=None, asof_ts=None,
 SPX_V2_PIN_MAX = 0.45
 SPX_V2_K50 = (0.23, 0.105)   # half-width = a*EM_realized + b*EM_vix
 SPX_V2_K75 = (0.40, 0.20)
+SPX_V2_HIVIX = (20.0, 1.45, 1.25)  # VIX >= 20: widen 50% / 75% bands (fit on 12-13 high-VIX days, May-Nov)
 FORMULA_CLOSE_SPX_V2_ZH = (
     '收盘预估（SPX v2，盘中）= 现价 + w钉 ×（0DTE 钉点 − 现价）。'
     '0DTE 钉点 = 当天到期 SPXW 在现价 ±0.5×预期波动内 |GEX| 最大的行权价；没有就只用现价。'
     'w钉 = 0.5 ×（1 − √(剩余时间/6.5 小时)），上限 45%：美东 13:00（北京 02:00）约 16%，14:00（北京 03:00）约 22%。'
     'Max Pain、远处的 GEX 磁铁和动态支点不再参与（回测里它们把预估拉偏）。'
-    '50% / 75% 区间半宽 = 0.23 / 0.40 × 日内已实现波动外推 + 0.105 / 0.20 × VIX 外推，系数用 2026-01~08 的 5 分钟数据定，9~11 月样本外检验约 57% / 82% 命中。'
+    '50% / 75% 区间半宽 = 0.23 / 0.40 × 日内已实现波动外推 + 0.105 / 0.20 × VIX 外推，系数用 2026-01~08 的 5 分钟数据定，9~11 月样本外检验约 57% / 82% 命中。VIX ≥ 20 时 50% 区间再放宽 1.45 倍、75% 区间放宽 1.25 倍（高波动日样本少，约 12 天）。'
     '盘前、盘后沿用旧的结构加权公式。这是统计估计，不是保证。'
 )
 
@@ -904,6 +905,12 @@ def spx_v2_adjust(est, spot, futu, bars, levels=None, now=None, vix=None):
             band_src = 'vix' if em_vix else 'implied'
         else:
             return est
+        band_scale = None
+        if vix and vix >= SPX_V2_HIVIX[0]:
+            hw50 *= SPX_V2_HIVIX[1]
+            hw75 *= SPX_V2_HIVIX[2]
+            band_scale = 'vix>=20'
+        est['band_scale'] = band_scale
         est['legacy_estimate'] = est.get('estimate')
         est['legacy_range_50'] = est.get('range_50')
         est['legacy_range_75'] = est.get('range_75')
