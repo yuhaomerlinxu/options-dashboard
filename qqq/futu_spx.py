@@ -243,11 +243,17 @@ def aggregate_by_strike(quotes, spot, multiplier=MULTIPLIER):
     return by, used
 
 
-def gamma_flip(by, spot):
+FLIP_BAND_PCT = 0.03  # ignore crossings more than 3% (~±220 SPX pts) from spot
+
+
+def gamma_flip(by, spot, band_pct=FLIP_BAND_PCT):
     """Interpolated cumulative-GEX zero crossing closest to ``spot``.
 
     Returns None if the cumulative sum never changes sign (no flip in
-    the loaded window — often a truncated chain).
+    the loaded window — often a truncated chain), or if the nearest
+    crossing is farther than ``band_pct`` from spot. A far crossing is
+    usually an artifact of the strike window edge and made the flip jump
+    (e.g. 6577 vs 7377 on the same day).
     """
     if not by:
         return None
@@ -270,7 +276,25 @@ def gamma_flip(by, spot):
     if not crossings:
         return None
     flip = min(crossings, key=lambda x: abs(x - float(spot)))
+    if band_pct and abs(flip - float(spot)) > float(spot) * float(band_pct):
+        return None
     return round(flip, 2)
+
+
+def near_spot_pin(by_near, spot, em):
+    """Largest |GEX| strike of the nearest (0DTE) expiry within 0.5 x expected move of spot.
+
+    This is the only structure term the v2 SPX close estimate keeps. Returns
+    (strike, gex) or (None, None).
+    """
+    if not by_near or not spot or not em or em <= 0:
+        return None, None
+    near = [k for k in by_near if abs(float(k) - float(spot)) <= 0.5 * float(em)]
+    near = [k for k in near if by_near[k].get('gex_oi')]
+    if not near:
+        return None, None
+    k = max(near, key=lambda x: abs(by_near[x]['gex_oi']))
+    return round(float(k), 2), by_near[k]['gex_oi']
 
 
 def call_put_walls(by, spot=None, band=None):
@@ -720,6 +744,7 @@ def load_spx_chain(spot, host=HOST, port=PORT, window=DEFAULT_WINDOW,
         by_all, n_all = aggregate_by_strike(quotes, spot)
         by_near, n_near = aggregate_by_strike(straddle_src, spot)
         out['by'] = by_all
+        out['by_near'] = by_near
         out['n_used'] = n_all
         out['n_near'] = n_near
         flip = gamma_flip(by_all, spot)

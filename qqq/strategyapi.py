@@ -817,6 +817,120 @@ def blend_close_estimate(spot, levels, by=None, iv=None, now=None, asof_ts=None,
 
 
 
+# --- SPX close estimate v2 (SPX/Futu path only; QQQ/SPY keep blend_close_estimate) ---
+# Evidence (spx_forecast/research, 2026-11-26): on 227 sessions of Longbridge 5-min
+# .SPX.US bars, spot at 13:00/14:00 ET beat every momentum term out of sample, and on
+# 7 days with a real SPX/SPXW chain the old structure blend (55-68% weight on GEX
+# magnet / Max Pain / pivot) had MAE 14.5/10.5 pts vs 9.0/7.8 for spot + small 0DTE pin.
+# The old ±0.67/±1.15 x implied-move bands held ~90%/~96% of closes (too wide).
+SPX_V2_PIN_MAX = 0.45
+SPX_V2_K50 = (0.23, 0.105)   # half-width = a*EM_realized + b*EM_vix
+SPX_V2_K75 = (0.40, 0.20)
+FORMULA_CLOSE_SPX_V2_ZH = (
+    '收盘预估（SPX v2，盘中）= 现价 + w钉 ×（0DTE 钉点 − 现价）。'
+    '0DTE 钉点 = 当天到期 SPXW 在现价 ±0.5×预期波动内 |GEX| 最大的行权价；没有就只用现价。'
+    'w钉 = 0.5 ×（1 − √(剩余时间/6.5 小时)），上限 45%：美东 13:00（北京 02:00）约 16%，14:00（北京 03:00）约 22%。'
+    'Max Pain、远处的 GEX 磁铁和动态支点不再参与（回测里它们把预估拉偏）。'
+    '50% / 75% 区间半宽 = 0.23 / 0.40 × 日内已实现波动外推 + 0.105 / 0.20 × VIX 外推，系数用 2026-01~08 的 5 分钟数据定，9~11 月样本外检验约 57% / 82% 命中。'
+    '盘前、盘后沿用旧的结构加权公式。这是统计估计，不是保证。'
+)
+
+
+def _rv_em_to_close(bars, spot, t_rem):
+    """Realized 5-min vol of today's RTH bars, extrapolated to the close (points)."""
+    if not bars or not spot or t_rem <= 0:
+        return None
+    buckets = {}
+    for b in bars:
+        try:
+            buckets[int(b['t']) // 300] = float(b['c'])
+        except (KeyError, TypeError, ValueError):
+            continue
+    closes = [buckets[k] for k in sorted(buckets)]
+    if len(closes) < 7:
+        return None
+    rets = [math.log(closes[i] / closes[i - 1]) for i in range(1, len(closes)) if closes[i - 1] > 0]
+    if not rets:
+        return None
+    rv = math.sqrt(sum(r * r for r in rets) / len(rets))
+    return float(spot) * rv * math.sqrt(t_rem / 300.0)
+
+
+def _vix_last():
+    try:
+        q = _cli_or_sdk(
+            lambda: E._cached('st-q-vix', _ttl(30, 180), lambda: E._quote('.VIX.US')),
+            lambda: _sdk_quote('.VIX.US'))
+        v = float((q or {}).get('last') or 0)
+        return v if 5 < v < 150 else None
+    except Exception:
+        return None
+
+
+def spx_v2_adjust(est, spot, futu, bars, levels=None, now=None, vix=None):
+    """Replace the SPX intraday estimate/bands with v2. Off-hours: keep legacy blend.
+
+    Keeps every legacy key; the old numbers move to ``legacy_estimate`` /
+    ``legacy_range_50`` / ``legacy_range_75``. Never raises.
+    """
+    try:
+        if levels is not None:
+            # Robust (banded) flip from the Futu chain, even when it is None.
+            levels['zero_gamma'] = (futu or {}).get('zero_gamma')
+            est['zero_gamma'] = levels['zero_gamma']
+            est['below_zero_gamma'] = bool(levels['zero_gamma'] is not None and float(spot) < float(levels['zero_gamma']))
+        now = now or datetime.now(ET)
+        t_rem, t_sess, in_rth = _session_remaining(now)
+        est['model'] = 'spx-v2' if in_rth else 'legacy-offhours'
+        if not in_rth:
+            return est
+        import futu_spx as F
+        em_impl = est.get('em_close')
+        pin, pin_gex = F.near_spot_pin((futu or {}).get('by_near'), spot, em_impl)
+        w_pin = 0.0
+        if pin is not None:
+            w_pin = min(SPX_V2_PIN_MAX, 0.5 * (1.0 - math.sqrt(t_rem / t_sess)))
+        e = float(spot) + w_pin * ((pin if pin is not None else float(spot)) - float(spot))
+        vix = vix if vix is not None else _vix_last()
+        em_vix = float(spot) * vix / 100.0 * math.sqrt(t_rem / (252 * t_sess)) if vix else None
+        em_rv = _rv_em_to_close(bars, spot, t_rem)
+        if em_rv and em_vix:
+            hw50 = SPX_V2_K50[0] * em_rv + SPX_V2_K50[1] * em_vix
+            hw75 = SPX_V2_K75[0] * em_rv + SPX_V2_K75[1] * em_vix
+            band_src = 'realized+vix'
+        elif em_vix or em_impl:
+            base = em_vix or float(em_impl)
+            hw50, hw75 = 0.21 * base, 0.41 * base
+            band_src = 'vix' if em_vix else 'implied'
+        else:
+            return est
+        est['legacy_estimate'] = est.get('estimate')
+        est['legacy_range_50'] = est.get('range_50')
+        est['legacy_range_75'] = est.get('range_75')
+        est['legacy_components'] = est.get('components')
+        est['estimate'] = round(e, 2)
+        est['range_50'] = [round(e - hw50, 2), round(e + hw50, 2)]
+        est['range_75'] = [round(e - hw75, 2), round(e + hw75, 2)]
+        est['w_spot'] = round(1.0 - w_pin, 4)
+        est['pin_0dte'] = pin
+        est['pin_0dte_gex'] = pin_gex
+        est['w_pin'] = round(w_pin, 4)
+        est['em_realized'] = None if em_rv is None else round(em_rv, 2)
+        est['em_vix'] = None if em_vix is None else round(em_vix, 2)
+        est['band_source'] = band_src
+        est['blend_mode'] = 'spx_v2'
+        comps = [{'name': '现价', 'key': 'spot', 'value': round(float(spot), 2),
+                  'weight': round(1.0 - w_pin, 4), 'decay': 1.0}]
+        if pin is not None and w_pin > 0:
+            comps.append({'name': '0DTE 钉点', 'key': 'pin_0dte', 'value': pin,
+                          'weight': round(w_pin, 4), 'decay': 1.0})
+        est['components'] = comps
+        est['formula'] = FORMULA_CLOSE_SPX_V2_ZH
+    except Exception as ex:
+        est['model_error'] = type(ex).__name__
+    return est
+
+
 def _quiet_stdio():
     """Silence C-level stdout/stderr (the Longport SDK prints a quote-level table)."""
     import os
@@ -1060,6 +1174,7 @@ def close_estimate(sym='SPX', expiry=None):
             est = blend_close_estimate(
                 last, levels, by, iv, asof_ts=last_t, scale_note=scale_note,
                 em_close_override=futu.get('em_close'))
+            est = spx_v2_adjust(est, last, futu, bars, levels)
             st = futu.get('straddle') or {}
             est.update({
                 'symbol': spec['label'],
@@ -1283,11 +1398,11 @@ def payload(sym='QQQ', expiry=None):
         'chain_source': 'futu' if used_futu else ('spy-proxy' if spec['scale'] == 'spy' else 'longbridge'),
         'call_wall': levels.get('call_wall'),
         'put_wall': levels.get('put_wall'),
-        'close_estimate': blend_close_estimate(
+        'close_estimate': (lambda _e: spx_v2_adjust(_e, last, futu, bars, levels) if used_futu else _e)(blend_close_estimate(
             last, levels, by, iv, asof_ts=last_t, scale_note=(
                 'SPX 期权来自富途 OpenAPI（SPXW/SPX），现价来自长桥 .SPX.US' if used_futu
                 else ('SPY期权按 SPX/SPY=%.4f 换算' % scale if spec['scale'] else None)
-            ), em_close_override=futu_em_override),
+            ), em_close_override=futu_em_override)),
         'source': {
             'spot': 'Longbridge %s 报价与1分钟K线（RTH）' % spec['bar'],
             'gex': (
@@ -1419,6 +1534,7 @@ def fly_payload(sym='SPX', expiry=None, center=None, wing=None, typ='auto'):
                 last, f_levels, f_by, f_iv, asof_ts=last_t_est,
                 scale_note='SPX 期权来自富途 OpenAPI（SPXW/SPX），现价来自长桥 .SPX.US',
                 em_close_override=futu.get('em_close'))
+            close_est = spx_v2_adjust(close_est, last, futu, bars, f_levels)
             close_est['symbol'] = spec['label']
             close_est['expiry'] = f_exp or expiry
             close_est['chain_source'] = 'futu'
