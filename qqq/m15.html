@@ -1,0 +1,76 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>QQQ / SPX 15分钟</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0b0f17;color:#dfe6ee;font:14px -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid #1c2533;flex-wrap:wrap;gap:4px}
+header b{font-size:16px}#st{font-size:12px;color:#8b98a9}
+.card{padding:6px 8px 4px;border-bottom:1px solid #1c2533}
+.hd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.nm{font-size:16px;font-weight:700}.px{font-size:22px;font-weight:700}.up{color:#26a69a}.dn{color:#ef5350}
+.sub{font-size:12px;color:#8b98a9}.ex{font-size:12px;color:#c9a227}
+.ch{width:100%;height:42vh;min-height:260px}
+.lg{font-size:11px;color:#8b98a9;margin-top:2px}.lg i{display:inline-block;width:10px;height:2px;vertical-align:middle;margin-right:3px}
+footer{font-size:11px;color:#6b7686;padding:8px 10px 40px;line-height:1.6}
+a{color:#9cf}
+</style></head><body>
+<header><b>QQQ / SPX 15分钟K线</b><span id="st">加载中…</span></header>
+<div class="card"><div class="hd"><span class="nm">QQQ</span><span class="px" id="p0">—</span><span id="c0"></span><span class="ex" id="e0"></span></div><div class="sub" id="s0"></div><div class="ch" id="ch0"></div><div class="lg"><i style="background:#f5a623"></i>当日VWAP　底部为成交量　浅色底纹区分交易日</div></div>
+<div class="card"><div class="hd"><span class="nm">SPX</span><span class="px" id="p1">—</span><span id="c1"></span><span class="ex" id="e1"></span></div><div class="sub" id="s1"></div><div class="ch" id="ch1"></div><div class="lg">标普500指数 · 浅色底纹区分交易日</div></div>
+<footer>数据源：长桥 Longbridge 实时行情（QQQ.US、.SPX.US），仅常规交易时段K线（北京时间冬令时 22:30–05:00）；盘前/盘后价格单独显示在价格旁。图上时间均为北京时间（UTC+8），日期标签为美东交易日。显示最近 5 个交易日。开盘时段约每 30 秒刷新，休市时每 5 分钟刷新。<br>美股 11/26（感恩节）休市，图上为最后一个交易日的数据。<br><a href="/">← 期权看板</a></footer>
+<script src="/qqq/static/lwc.js"></script>
+<script>
+const OFF=8*3600,SY=['QQQ','SPX'];
+const fmtBJ=t=>{const d=new Date((t+OFF)*1000);const p=n=>String(n).padStart(2,'0');return `${d.getUTCMonth()+1}/${d.getUTCDate()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`};
+const etDate=t=>new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'numeric',day:'numeric'}).format(new Date(t*1000));
+function mk(el,vol){
+  const ch=LightweightCharts.createChart(el,{autoSize:true,layout:{background:{color:'#0b0f17'},textColor:'#aab4c0',fontSize:11},
+    grid:{vertLines:{color:'#141b26'},horzLines:{color:'#141b26'}},rightPriceScale:{borderColor:'#1c2533',scaleMargins:{top:0.06,bottom:vol?0.22:0.06}},
+    timeScale:{borderColor:'#1c2533',timeVisible:true,secondsVisible:false,rightOffset:3},crosshair:{mode:0},
+    localization:{locale:'zh-CN',timeFormatter:t=>fmtBJ(t-OFF)},handleScale:{axisPressedMouseMove:true},handleScroll:{vertTouchDrag:false}});
+  const bg=ch.addHistogramSeries({priceScaleId:'bg',priceLineVisible:false,lastValueVisible:false,priceFormat:{type:'volume'}});
+  ch.priceScale('bg').applyOptions({scaleMargins:{top:0,bottom:0},visible:false});
+  const cs=ch.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderVisible:false,wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
+  let v=null,vw=null;
+  if(vol){v=ch.addHistogramSeries({priceScaleId:'v',priceFormat:{type:'volume'},priceLineVisible:false,lastValueVisible:false});ch.priceScale('v').applyOptions({scaleMargins:{top:0.82,bottom:0}});
+    vw=[];}
+  return {ch,bg,cs,v,vw,fit:true};
+}
+const C=[mk(document.getElementById('ch0'),true),mk(document.getElementById('ch1'),false)];
+function draw(i,s){
+  const c=C[i],b=s.bars||[];
+  const px=document.getElementById('p'+i),cc=document.getElementById('c'+i),ee=document.getElementById('e'+i),ss=document.getElementById('s'+i);
+  if(s.last!=null){px.textContent=s.last.toFixed(2);const up=(s.chg_pct||0)>=0;px.className='px '+(up?'up':'dn');
+    cc.textContent=s.chg_pct!=null?((up?'+':'')+s.chg_pct.toFixed(2)+'%'):'';cc.className=up?'up':'dn';}
+  else{px.textContent='—';cc.textContent=s.quote_error?'行情获取失败':'';}
+  ee.textContent=s.ext?`${{pre_market:'盘前',post_market:'盘后',overnight:'夜盘'}[s.ext.k]||''} ${s.ext.last.toFixed(2)} (${s.ext.chg_pct>=0?'+':''}${s.ext.chg_pct.toFixed(2)}%)`:'';
+  const parts=[];if(s.prev_close!=null)parts.push('昨收 '+s.prev_close.toFixed(2));
+  if(s.day_high!=null&&s.day_low!=null)parts.push('日内高/低 '+s.day_high.toFixed(2)+' / '+s.day_low.toFixed(2));
+  if(b.length)parts.push('最新K线 '+fmtBJ(b[b.length-1].t)+' 北京时间');
+  if(s.bars_error)parts.push('K线获取失败');ss.textContent=parts.join('　');
+  if(!b.length)return;
+  const days=[];let cur=null,k=-1,pv=0,vv=0;const bg=[],cd=[],vo=[],vw=[],mks=[];
+  for(const x of b){const d=etDate(x.t),T=x.t+OFF;
+    if(d!==cur){cur=d;k++;pv=0;vv=0;mks.push({time:T,position:'aboveBar',color:'#6b7686',shape:'square',size:0,text:d});if(c.vw)vw.push([]);}
+    bg.push({time:T,value:1,color:k%2?'rgba(120,140,170,0.12)':'rgba(0,0,0,0)'});
+    cd.push({time:T,open:x.o,high:x.h,low:x.l,close:x.c});
+    if(c.v)vo.push({time:T,value:x.v,color:x.c>=x.o?'rgba(38,166,154,0.45)':'rgba(239,83,80,0.45)'});
+    if(c.vw&&x.v>0&&!x.ext){pv+=(x.h+x.l+x.c)/3*x.v;vv+=x.v;vw[vw.length-1].push({time:T,value:+(pv/vv).toFixed(3)});}
+  }
+  c.bg.setData(bg);c.cs.setData(cd);c.cs.setMarkers(mks);
+  if(c.v)c.v.setData(vo);
+  if(c.vw){while(c.vw.length<vw.length)c.vw.push(c.ch.addLineSeries({color:'#f5a623',lineWidth:1,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false}));
+    c.vw.forEach((ls,j)=>ls.setData(vw[j]||[]));}
+  if(c.fit){c.ch.timeScale().fitContent();c.fit=false;}
+}
+function inSession(){const n=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));const m=n.getHours()*60+n.getMinutes(),w=n.getDay();return w>0&&w<6&&m>=4*60&&m<20*60;}
+let timer=null;
+async function load(){
+  try{const r=await fetch('/qqq/m15data',{cache:'no-store'});const d=await r.json();
+    (d.symbols||[]).forEach((s,i)=>draw(i,s));
+    document.getElementById('st').textContent='更新于 '+new Date().toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false})+' 北京时间'+(inSession()?'':' · 休市');
+  }catch(e){document.getElementById('st').textContent='加载失败，稍后重试';}
+  clearTimeout(timer);timer=setTimeout(load,inSession()?30000:300000);
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
+load();
+</script></body></html>

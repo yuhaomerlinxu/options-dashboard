@@ -253,6 +253,14 @@ class Mixin:
             except Exception as e:
                 r={'error':str(e)}
             self.send(200,json.dumps(r,ensure_ascii=False,default=str).encode(),'application/json; charset=utf-8');return
+        if p=='/qqq/m15':self.send(200,open(os.path.join(D,'m15.html'),'rb').read(),'text/html; charset=utf-8');return
+        if p=='/qqq/m15data':
+            try:
+                import m15api
+                r=m15api.payload()
+            except Exception as e:
+                r={'error':str(e)}
+            self.send(200,json.dumps(r,ensure_ascii=False,default=str).encode(),'application/json; charset=utf-8');return
         if p=='/mbot':self.send(200,MPAGE,'text/html; charset=utf-8');return
         if p=='/mbot/data':
             sy=parse_qs(urlparse(self.path).query).get('s',['SPX'])[0]
