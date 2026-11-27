@@ -14,6 +14,8 @@ _lk = threading.Lock()
 _snap = None
 _PATHS = (
     os.environ.get('SPX_LEVELS_BOARD_FILE'),
+    '/var/data/spx_levels_board.json',  # Render persistent disk, if mounted
+    '/data/spx_levels_board.json',
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'spx_levels_board.json'),
 )
 
@@ -57,15 +59,17 @@ def ingest(doc, received_ts=None, persist=True):
     with _lk:
         _snap = clean
         if persist:
-            try:
-                path = _file_path()
-                os.makedirs(os.path.dirname(path), exist_ok=True)
-                tmp = path + '.tmp'
-                with open(tmp, 'w') as f:
-                    json.dump(clean, f, ensure_ascii=False, default=str)
-                os.replace(tmp, path)
-            except Exception:
-                pass
+            for path in _PATHS:
+                if not path:
+                    continue
+                try:
+                    os.makedirs(os.path.dirname(path), exist_ok=True)
+                    tmp = path + '.tmp'
+                    with open(tmp, 'w') as f:
+                        json.dump(clean, f, ensure_ascii=False, default=str)
+                    os.replace(tmp, path)
+                except Exception:
+                    continue
     return {
         'ok': True,
         'pushed_bj': clean['board_pushed_bj'],
@@ -78,7 +82,12 @@ def ingest(doc, received_ts=None, persist=True):
 def get_snap():
     with _lk:
         s = _snap
-    return s
+    if s:
+        return s
+    # Same-instance process restart: reload from disk before giving up.
+    load_persisted()
+    with _lk:
+        return _snap
 
 def status():
     s = get_snap()
@@ -97,17 +106,23 @@ def status():
 
 def load_persisted():
     global _snap
-    path = _file_path()
-    if not path or not os.path.isfile(path):
+    best = None
+    for path in _PATHS:
+        if not path or not os.path.isfile(path):
+            continue
+        try:
+            with open(path) as f:
+                doc = json.load(f)
+            if not (isinstance(doc, dict) and doc.get('bars') and doc.get('board_pushed_ts')):
+                continue
+            if best is None or float(doc['board_pushed_ts']) >= float(best.get('board_pushed_ts') or 0):
+                best = doc
+        except Exception:
+            continue
+    if best is None:
         return
-    try:
-        with open(path) as f:
-            doc = json.load(f)
-        if isinstance(doc, dict) and doc.get('bars') and doc.get('board_pushed_ts'):
-            with _lk:
-                if _snap is None or float(doc['board_pushed_ts']) >= float((_snap or {}).get('board_pushed_ts') or 0):
-                    _snap = doc
-    except Exception:
-        pass
+    with _lk:
+        if _snap is None or float(best['board_pushed_ts']) >= float((_snap or {}).get('board_pushed_ts') or 0):
+            _snap = best
 
 load_persisted()

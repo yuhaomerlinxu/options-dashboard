@@ -206,14 +206,8 @@ def once():
             res['levels_error'] = lv.get('error')
     except Exception as e:
         _log('levels push skipped: ' + type(e).__name__ + ': ' + str(e)[:200])
-    try:
-        import push_spx_board
-        bd = _run_capped('board push', push_spx_board.once, 180)
-        res['board_ok'] = bool(bd.get('ok'))
-        if not bd.get('ok'):
-            res['board_error'] = bd.get('error')
-    except Exception as e:
-        _log('board push skipped: ' + type(e).__name__ + ': ' + str(e)[:200])
+    # Board push runs in its own process (push_spx_board.py --loop) so a hung
+    # Futu/levels call cannot delay it.
     return res if res.get('ok') else {**res, 'build_ok': True}
 
 

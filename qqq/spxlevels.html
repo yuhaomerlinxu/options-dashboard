@@ -35,6 +35,7 @@ h1{font-size:15px;margin:0;font-weight:700;letter-spacing:.02em}
 .sg{font-size:12px;padding:3px 0;color:#c5d0da}
 .sg .buy{color:#3ddc97;font-weight:700}.sg .exit{color:#ff5c7a;font-weight:700}
 .errbox{margin:12px;padding:12px 14px;background:#2a1619;border:1px solid #5a2a32;border-radius:8px;color:#ffb4bc;font-size:13px;line-height:1.6;display:none}
+.stalebox{margin:12px;padding:10px 14px;background:#2a2416;border:1px solid #6a5a2a;border-radius:8px;color:#f0d48a;font-size:13px;line-height:1.6;display:none}
 .rule{margin:8px 12px 48px;padding:10px 12px;background:#14181e;border:1px solid #1e2630;border-radius:8px;font-size:11px;color:#9aa7b4;line-height:1.7}
 .rule b{color:#c5d0da}
 a{color:#7cb7ff}
@@ -50,6 +51,7 @@ a{color:#7cb7ff}
   <div class="offbar bot" id="offBot"></div>
 </div>
 <div class="errbox" id="errbox"></div>
+<div class="stalebox" id="stalebox"></div>
 <div class="list" id="list"></div>
 <div class="sig" id="sig"></div>
 <div class="rule" id="rule">
@@ -255,16 +257,35 @@ ch.timeScale().subscribeVisibleTimeRangeChange(()=>syncOverlays());
 ch.timeScale().subscribeVisibleLogicalRangeChange(()=>syncOverlays());
 window.addEventListener('resize',()=>syncOverlays());
 let timer=null;
+const CACHE_KEY='spx_levels_board_v1';
+function saveCache(d){
+  try{localStorage.setItem(CACHE_KEY,JSON.stringify({saved:Date.now(),doc:d}));}catch(e){}
+}
+function readCache(){
+  try{
+    const o=JSON.parse(localStorage.getItem(CACHE_KEY)||'');
+    if(o&&o.doc&&(o.doc.bars||[]).length)return o;
+  }catch(e){}
+  return null;
+}
 function showErr(msg){
   const el=document.getElementById('errbox');
   const st=document.getElementById('st');
   st.textContent=msg;
+  document.getElementById('stalebox').style.display='none';
   if(!lastDoc){
     el.style.display='block';
     el.textContent=msg+' 不是页面坏了，是数据还没送到。请稍等几秒后刷新。';
   }
 }
 function hideErr(){document.getElementById('errbox').style.display='none';}
+function showStale(d){
+  const when=d.board_pushed_bj||d.server_time_bj||'刚才';
+  document.getElementById('stalebox').style.display='block';
+  document.getElementById('stalebox').textContent='这是 '+when+' 北京时间的本地缓存。云端暂时没有新数据，页面会自动再试。';
+  document.getElementById('st').textContent='本地缓存 · '+when+' 北京时间';
+}
+function hideStale(){document.getElementById('stalebox').style.display='none';}
 async function load(){
   const ac=new AbortController();
   const to=setTimeout(()=>ac.abort(),12000);
@@ -274,14 +295,23 @@ async function load(){
     const d=await r.json();
     if(!d || d.ok===false || d.error) throw new Error((d && (d.error||d.message)) || '没有数据');
     if(!(d.bars||[]).length) throw new Error(d.error||'暂无K线');
-    hideErr();
+    hideErr();hideStale();
+    saveCache(d);
     draw(d);
   }catch(e){
     clearTimeout(to);
-    const msg=e && e.name==='AbortError' ? '数据请求超时，请刷新重试' : ('加载失败：'+(e && e.message ? e.message : '请刷新重试'));
-    showErr(msg);
+    const cached=readCache();
+    if(cached&&cached.doc){
+      hideErr();
+      draw(cached.doc);
+      showStale(cached.doc);
+    }else{
+      const msg=e && e.name==='AbortError' ? '数据请求超时，请刷新重试' : ('加载失败：'+(e && e.message ? e.message : '请刷新重试'));
+      showErr(msg);
+    }
   }
-  clearTimeout(timer);timer=setTimeout(load,30000);
+  const retry=readCache()&&document.getElementById('stalebox').style.display==='block'?15000:30000;
+  clearTimeout(timer);timer=setTimeout(load,retry);
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
 load();
